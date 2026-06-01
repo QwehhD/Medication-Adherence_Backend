@@ -30,6 +30,11 @@ export class HardwareService {
       return { dispense: false };
     }
 
+    await this.prisma.schedule.update({
+      where: { id: schedule.id },
+      data: { status: 'WAITING_VERIFICATION' },
+    });
+
     return {
       dispense: true,
       schedule_id: schedule.id,
