@@ -20,16 +20,13 @@ export class HardwareService {
     const minutes = now.getMinutes().toString().padStart(2, '0');
     const currentTime = `${hours}:${minutes}`;
     
-    // Also check previous minute window to account for ESP timing delays
-    const prevMinute = new Date(now.getTime() - 60000);
-    const prevHours = prevMinute.getHours().toString().padStart(2, '0');
-    const prevMinutes = prevMinute.getMinutes().toString().padStart(2, '0');
-    const prevTime = `${prevHours}:${prevMinutes}`;
+    // Database format tanpa leading zero: "2:02" bukan "02:02"
+    const currentTimeNoLeadingZero = `${now.getHours()}:${minutes}`;
 
     const schedule = await this.prisma.schedule.findFirst({
       where: {
         time: {
-          in: [currentTime, prevTime],
+          in: [currentTime, currentTimeNoLeadingZero],
         },
         status: 'PENDING',
       },
