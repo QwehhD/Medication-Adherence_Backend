@@ -6,15 +6,27 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomBytes } from 'crypto';
+import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class EmailVerificationService {
   private readonly TOKEN_EXPIRY_MINUTES = 60;
+  private transporter: nodemailer.Transporter;
 
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
-  ) {}
+  ) {
+    this.transporter = nodemailer.createTransport({
+      host: this.config.get<string>('MAIL_HOST', 'smtp.gmail.com'),
+      port: this.config.get<number>('MAIL_PORT', 587),
+      secure: false,
+      auth: {
+        user: this.config.get<string>('MAIL_USER'),
+        pass: this.config.get<string>('MAIL_PASS'),
+      },
+    });
+  }
 
   async sendVerificationLink(email: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { email } });
@@ -24,7 +36,6 @@ export class EmailVerificationService {
       throw new BadRequestException('Email already verified');
     }
 
-    // Invalidate old tokens
     await this.prisma.emailVerification.updateMany({
       where: { user_id: user.id, used_at: null },
       data: { used_at: new Date() },
@@ -40,8 +51,16 @@ export class EmailVerificationService {
     const appUrl = this.config.get<string>('APP_URL', 'http://localhost:3000');
     const link = `${appUrl}/auth/verify-email?token=${token}`;
 
-    // TODO: Send email with link
-    console.log(`[DEV] Verification link for ${email}: ${link}`);
+    await this.transporter.sendMail({
+      from: this.config.get<string>('MAIL_FROM', `UKL App <${this.config.get('MAIL_USER')}>`),
+      to: email,
+      subject: 'Verifikasi Email Anda',
+      html: `
+        <p>Klik link berikut untuk verifikasi email Anda:</p>
+        <a href="${link}">${link}</a>
+        <p>Link berlaku selama ${this.TOKEN_EXPIRY_MINUTES} menit.</p>
+      `,
+    });
   }
 
   async verifyToken(token: string): Promise<void> {
