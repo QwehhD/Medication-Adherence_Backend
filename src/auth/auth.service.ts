@@ -21,7 +21,7 @@ export class AuthService {
 
   async register(dto: RegisterDto) {
     const exists = await this.prisma.user.findFirst({
-      where: { email: dto.email, deleted_at: null },
+      where: { email: dto.email },
     });
     if (exists) throw new ConflictException('Email already registered');
 
