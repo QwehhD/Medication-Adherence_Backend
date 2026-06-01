@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class HardwareService {
   constructor(private prisma: PrismaService) {}
 
-  async check2Schedule() {
+  async checkScheduletest() {
   return {
     dispense: true,
     schedule_id: 999,
