@@ -5,6 +5,15 @@ import { PrismaService } from '../prisma/prisma.service';
 export class HardwareService {
   constructor(private prisma: PrismaService) {}
 
+  async check2Schedule() {
+  return {
+    dispense: true,
+    schedule_id: 999,
+    medicine_name: "TEST OBAT",
+    dose: "1 tablet",
+  };
+}
+
   async checkSchedule() {
     const now = new Date();
     const hours = now.getHours().toString().padStart(2, '0');
@@ -34,10 +43,10 @@ export class HardwareService {
     }
 
     return {
-    dispense: true,
-    schedule_id: 999,
-    medicine_name: "TEST OBAT",
-    dose: "1 tablet",
-  };
+      dispense: true,
+      schedule_id: schedule.id,
+      medicine_name: schedule.medicine.name,
+      dose: schedule.dose,
+    };
   }
 }

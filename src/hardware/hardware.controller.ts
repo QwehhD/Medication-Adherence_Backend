@@ -15,6 +15,6 @@ export class HardwareController {
     if (apiKey !== process.env.HARDWARE_API_KEY) {
       throw new UnauthorizedException('Invalid API key');
     }
-    return this.hardwareService.checkSchedule();
+    return this.hardwareService.check2Schedule();
   }
 }
