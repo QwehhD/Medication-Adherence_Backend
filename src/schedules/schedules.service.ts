@@ -76,6 +76,7 @@ export class SchedulesService {
     const schedule = await this.prisma.schedule.findUnique({ where: { id } });
     if (!schedule) throw new NotFoundException('Schedule not found');
 
+    await this.prisma.medicationConsumption.deleteMany({ where: { schedule_id: id } });
     await this.prisma.schedule.delete({ where: { id } });
     return { message: 'Schedule deleted successfully' };
   }
