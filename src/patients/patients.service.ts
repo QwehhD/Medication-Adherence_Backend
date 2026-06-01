@@ -14,7 +14,6 @@ export class PatientsService {
 
   findAll() {
     return this.prisma.patientProfile.findMany({
-      where: { deleted_at: null },
       include: {
         user: { select: { id: true, email: true, role: true, created_at: true } },
       },
@@ -22,8 +21,8 @@ export class PatientsService {
   }
 
   async findOne(id: string) {
-    const patient = await this.prisma.patientProfile.findFirst({
-      where: { id, deleted_at: null },
+    const patient = await this.prisma.patientProfile.findUnique({
+      where: { id },
       include: {
         user: { select: { id: true, email: true, role: true, created_at: true } },
       },
@@ -69,8 +68,8 @@ export class PatientsService {
   }
 
   async update(id: string, dto: UpdatePatientDto) {
-    const patient = await this.prisma.patientProfile.findFirst({
-      where: { id, deleted_at: null },
+    const patient = await this.prisma.patientProfile.findUnique({
+      where: { id },
     });
     if (!patient) throw new NotFoundException('Patient not found');
 
@@ -81,14 +80,13 @@ export class PatientsService {
   }
 
   async remove(id: string) {
-    const patient = await this.prisma.patientProfile.findFirst({
-      where: { id, deleted_at: null },
+    const patient = await this.prisma.patientProfile.findUnique({
+      where: { id },
     });
     if (!patient) throw new NotFoundException('Patient not found');
 
-    await this.prisma.patientProfile.update({
-      where: { id },
-      data: { deleted_at: new Date() },
+    await this.prisma.user.delete({
+      where: { id: patient.user_id },
     });
 
     return { message: 'Patient deleted successfully' };

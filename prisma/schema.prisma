@@ -54,7 +54,6 @@ model PatientProfile {
   age             Int
   main_disease    String
   whatsapp_number String
-  deleted_at      DateTime?
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
@@ -79,8 +78,8 @@ model Schedule {
   created_at  DateTime       @default(now())
 
   doctor       User                    @relation("DoctorSchedules", fields: [doctor_id], references: [id])
-  patient      User                    @relation("PatientSchedules", fields: [patient_id], references: [id])
-  medicine     Medicine                @relation(fields: [medicine_id], references: [id])
+  patient      User                    @relation("PatientSchedules", fields: [patient_id], references: [id], onDelete: Cascade)
+  medicine     Medicine                @relation(fields: [medicine_id], references: [id], onDelete: Cascade)
   consumptions MedicationConsumption[]
 }
 
@@ -95,7 +94,7 @@ model MedicationConsumption {
   rejection_reason    String?
   created_at          DateTime       @default(now())
 
-  schedule     Schedule @relation(fields: [schedule_id], references: [id])
-  patient      User     @relation("PatientConsumptions", fields: [patient_id], references: [id])
+  schedule     Schedule @relation(fields: [schedule_id], references: [id], onDelete: Cascade)
+  patient      User     @relation("PatientConsumptions", fields: [patient_id], references: [id], onDelete: Cascade)
   verified_by  User?    @relation("DoctorVerifications", fields: [verified_by_id], references: [id])
 }
