@@ -10,10 +10,18 @@ export class HardwareService {
     const hours = now.getHours().toString().padStart(2, '0');
     const minutes = now.getMinutes().toString().padStart(2, '0');
     const currentTime = `${hours}:${minutes}`;
+    
+    // Also check previous minute window to account for ESP timing delays
+    const prevMinute = new Date(now.getTime() - 60000);
+    const prevHours = prevMinute.getHours().toString().padStart(2, '0');
+    const prevMinutes = prevMinute.getMinutes().toString().padStart(2, '0');
+    const prevTime = `${prevHours}:${prevMinutes}`;
 
     const schedule = await this.prisma.schedule.findFirst({
       where: {
-        time: currentTime,
+        time: {
+          in: [currentTime, prevTime],
+        },
         status: 'PENDING',
       },
       include: {
