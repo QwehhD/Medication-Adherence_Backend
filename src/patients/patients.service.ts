@@ -33,8 +33,8 @@ export class PatientsService {
   }
 
   async create(dto: CreatePatientDto) {
-    const exists = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+    const exists = await this.prisma.user.findFirst({
+      where: { email: dto.email, deleted_at: null },
     });
     if (exists) throw new ConflictException('Email already registered');
 
