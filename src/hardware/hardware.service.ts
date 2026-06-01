@@ -34,10 +34,10 @@ export class HardwareService {
     }
 
     return {
-      dispense: true,
-      schedule_id: schedule.id,
-      medicine_name: schedule.medicine.name,
-      dose: schedule.dose,
-    };
+    dispense: true,
+    schedule_id: 999,
+    medicine_name: "TEST OBAT",
+    dose: "1 tablet",
+  };
   }
 }
