@@ -7,12 +7,12 @@ export class HardwareService {
 
   async checkSchedule() {
     const now = new Date();
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
+    // Railway runs UTC; schedule times in DB are stored as WIB (UTC+7)
+    const wibNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+    const hours = wibNow.getUTCHours().toString().padStart(2, '0');
+    const minutes = wibNow.getUTCMinutes().toString().padStart(2, '0');
     const currentTime = `${hours}:${minutes}`;
-    
-    // Database format tanpa leading zero: "2:02" bukan "02:02"
-    const currentTimeNoLeadingZero = `${now.getHours()}:${minutes}`;
+    const currentTimeNoLeadingZero = `${wibNow.getUTCHours()}:${minutes}`;
 
     const schedule = await this.prisma.schedule.findFirst({
       where: {
@@ -39,10 +39,19 @@ export class HardwareService {
   }
 
   async debugSchedules() {
+    const now = new Date();
+    const wibNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+    const hours = wibNow.getUTCHours().toString().padStart(2, '0');
+    const minutes = wibNow.getUTCMinutes().toString().padStart(2, '0');
     const schedules = await this.prisma.schedule.findMany({
       where: { status: 'PENDING' },
       include: { medicine: true },
     });
-    return schedules;
+    return {
+      server_utc: now.toISOString(),
+      server_wib: `${hours}:${minutes}`,
+      looking_for: [`${hours}:${minutes}`, `${wibNow.getUTCHours()}:${minutes}`],
+      schedules,
+    };
   }
 }
