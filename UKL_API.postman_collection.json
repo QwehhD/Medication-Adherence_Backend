@@ -37,6 +37,13 @@
           }
         },
         {
+          "name": "Verify Email (click link from email)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/auth/verify-email?token=TOKEN_FROM_EMAIL_HERE"
+          }
+        },
+        {
           "name": "Login Doctor",
           "event": [
             {

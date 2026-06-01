@@ -20,18 +20,31 @@ enum ScheduleStatus {
 }
 
 model User {
-  id         String   @id @default(uuid())
-  email      String   @unique
-  username   String   @unique
-  password   String
-  role       Role
-  created_at DateTime @default(now())
+  id                 String    @id @default(uuid())
+  email              String    @unique
+  username           String    @unique
+  password           String
+  role               Role
+  email_verified_at  DateTime?
+  created_at         DateTime  @default(now())
 
   patientProfile          PatientProfile?
   schedulesAsDoctor       Schedule[]              @relation("DoctorSchedules")
   schedulesAsPatient      Schedule[]              @relation("PatientSchedules")
   consumptionsAsPatient   MedicationConsumption[] @relation("PatientConsumptions")
   verificationsAsDoctor   MedicationConsumption[] @relation("DoctorVerifications")
+  emailVerifications      EmailVerification[]
+}
+
+model EmailVerification {
+  id        String   @id @default(uuid())
+  user_id   String
+  token     String   @unique
+  used_at   DateTime?
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model PatientProfile {
