@@ -17,4 +17,9 @@ export class HardwareController {
     }
     return this.hardwareService.checkSchedule();
   }
+
+  @Get('debug-schedules')
+  async debugSchedules() {
+    return this.hardwareService.debugSchedules();
+  }
 }

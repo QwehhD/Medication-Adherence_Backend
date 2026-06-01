@@ -5,15 +5,6 @@ import { PrismaService } from '../prisma/prisma.service';
 export class HardwareService {
   constructor(private prisma: PrismaService) {}
 
-  async checkScheduletest() {
-  return {
-    dispense: true,
-    schedule_id: 999,
-    medicine_name: "TEST OBAT",
-    dose: "1 tablet",
-  };
-}
-
   async checkSchedule() {
     const now = new Date();
     const hours = now.getHours().toString().padStart(2, '0');
@@ -45,5 +36,13 @@ export class HardwareService {
       medicine_name: schedule.medicine.name,
       dose: schedule.dose,
     };
+  }
+
+  async debugSchedules() {
+    const schedules = await this.prisma.schedule.findMany({
+      where: { status: 'PENDING' },
+      include: { medicine: true },
+    });
+    return schedules;
   }
 }
