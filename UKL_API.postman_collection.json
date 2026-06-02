@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Medication Adherence API Suite",
-    "description": "Combined collection for Medication Adherence API and Patient Registration Sync Tests.",
+    "description": "Combined and cleaned collection for Medication Adherence API and Patient Registration.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -29,26 +29,26 @@
           }
         },
         {
-          "name": "Register Patient (with assigned doctor)",
+          "name": "Register Patient (Self-Register with Doctor)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": "{{base_url}}/auth/register",
+            "url": "{{base_url}}/auth/register-patient",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"patient@example.com\",\n  \"username\": \"patient_jane\",\n  \"password\": \"password123\",\n  \"role\": \"PATIENT\",\n  \"doctorId\": \"DOCTOR_ID_FROM_DOCTORS_LIST_HERE\"\n}"
+              "raw": "{\n  \"email\": \"patient.self2@example.com\",\n  \"password\": \"password123\",\n  \"full_name\": \"Maria Garcia\",\n  \"age\": 42,\n  \"main_disease\": \"Asthma\",\n  \"whatsapp_number\": \"081555666777\",\n  \"doctorId\": \"{{doctor_id}}\"\n}"
             }
           }
         },
         {
-          "name": "Register Patient (without assigned doctor)",
+          "name": "Register Patient (Self-Register without Doctor)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": "{{base_url}}/auth/register",
+            "url": "{{base_url}}/auth/register-patient",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"patient2@example.com\",\n  \"username\": \"patient_alex\",\n  \"password\": \"password123\",\n  \"role\": \"PATIENT\"\n}"
+              "raw": "{\n  \"email\": \"patient.self1@example.com\",\n  \"password\": \"password123\",\n  \"full_name\": \"John Smith\",\n  \"age\": 35,\n  \"main_disease\": \"Diabetes\",\n  \"whatsapp_number\": \"081987654321\"\n}"
             }
           }
         },
@@ -56,7 +56,7 @@
           "name": "Verify Email (click link from email)",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/auth/verify-email?token=TOKEN_FROM_EMAIL_HERE"
+            "url": "{{base_url}}/auth/verify-email?token={{verification_token}}"
           }
         },
         {
@@ -105,7 +105,7 @@
             "url": "{{base_url}}/auth/login",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"patient@example.com\",\n  \"password\": \"password123\"\n}"
+              "raw": "{\n  \"email\": \"patient.self1@example.com\",\n  \"password\": \"password123\"\n}"
             }
           }
         },
@@ -150,7 +150,7 @@
             "url": "{{base_url}}/patients",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"newpatient@example.com\",\n  \"password\": \"password123\",\n  \"full_name\": \"Jane Doe\",\n  \"age\": 28,\n  \"main_disease\": \"Hypertension\",\n  \"whatsapp_number\": \"081234567892\"\n}"
+              "raw": "{\n  \"email\": \"patient.doctor@example.com\",\n  \"password\": \"password123\",\n  \"full_name\": \"Jane Doe\",\n  \"age\": 28,\n  \"main_disease\": \"Hypertension\",\n  \"whatsapp_number\": \"081234567892\"\n}"
             }
           }
         },
@@ -378,207 +378,13 @@
           }
         }
       ]
-    },
-    {
-      "name": "Patient Registration - Sync Test",
-      "item": [
-        {
-          "name": "1. Get Doctors List",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/auth/doctors",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "doctors"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2. Doctor Path - Create Patient",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{doctor_token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"patient.doctor@example.com\",\n  \"password\": \"password123\",\n  \"full_name\": \"Jane Doe\",\n  \"age\": 28,\n  \"main_disease\": \"Hypertension\",\n  \"whatsapp_number\": \"081234567892\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/patients",
-              "host": ["{{base_url}}"],
-              "path": ["patients"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "3. Patient Self-Register Path - Without Doctor",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"patient.self1@example.com\",\n  \"password\": \"password123\",\n  \"full_name\": \"John Smith\",\n  \"age\": 35,\n  \"main_disease\": \"Diabetes\",\n  \"whatsapp_number\": \"081987654321\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auth/register-patient",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "register-patient"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "4. Patient Self-Register Path - With Doctor Assignment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"patient.self2@example.com\",\n  \"password\": \"password123\",\n  \"full_name\": \"Maria Garcia\",\n  \"age\": 42,\n  \"main_disease\": \"Asthma\",\n  \"whatsapp_number\": \"081555666777\",\n  \"doctorId\": \"{{doctor_id}}\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auth/register-patient",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "register-patient"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "5. Verify Patient Email (from email link)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/auth/verify-email?token={{verification_token}}",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "verify-email"],
-              "query": [
-                {
-                  "key": "token",
-                  "value": "{{verification_token}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "6. Doctor-Created Patient Login (no verification needed)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"patient.doctor@example.com\",\n  \"password\": \"password123\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auth/login",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "login"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "7. Self-Registered Patient Login (after verification)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"patient.self2@example.com\",\n  \"password\": \"password123\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auth/login",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "login"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "8. Get Patient Profile (authenticated)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{patient_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/auth/me",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "me"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "9. Get All Patients (doctor only)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{doctor_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/patients",
-              "host": ["{{base_url}}"],
-              "path": ["patients"]
-            }
-          },
-          "response": []
-        }
-      ]
     }
   ],
   "variable": [
     { "key": "base_url", "value": "http://localhost:3000", "type": "string" },
     { "key": "token_doctor", "value": "", "type": "string" },
     { "key": "token_patient", "value": "", "type": "string" },
-    { "key": "doctor_token", "value": "", "type": "string" },
     { "key": "doctor_id", "value": "", "type": "string" },
-    { "key": "patient_token", "value": "", "type": "string" },
     { "key": "verification_token", "value": "", "type": "string" }
   ]
 }
