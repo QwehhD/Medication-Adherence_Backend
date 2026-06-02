@@ -15,6 +15,7 @@ async function bootstrap() {
     "http://localhost:3000",
     "http://localhost:3001",
     "https://medication-adherencebackend-production.up.railway.app",
+    "https://adherify.vercel.app",
   ],
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
