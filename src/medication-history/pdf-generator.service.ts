@@ -21,33 +21,20 @@ const STATUS_COLORS: Record<ScheduleStatus, string> = {
   MISSED: '#534AB7',
 };
 
+// ── Inisialisasi pdfmake sekali saat module load (bukan di dalam method) ──────
+// Menggunakan build/pdfmake (kompatibel Node.js v0.2.x) dan inject VFS di sini.
+// Ini menghindari re-require berulang setiap request dan mencegah race condition.
+const pdfMake = require('pdfmake/build/pdfmake');
+const pdfFonts = require('pdfmake/build/vfs_fonts');
+pdfMake.vfs = pdfFonts.pdfMake?.vfs ?? pdfFonts.vfs;
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Injectable()
 export class PdfGeneratorService {
   constructor() {}
 
   async generateMedicationReport(data: PatientReportData): Promise<Buffer> {
     const { patient, assignedDoctor, summary, consumptions, filter, generatedAt } = data;
-
-    // ── SOLUSI SERVER-SIDE ────────────────────────────────────────────────────
-    // Gunakan pdfmake/src/printer (raw Node.js printer, bukan browser bundle).
-    // Font dikirim sebagai Buffer langsung — tidak perlu VFS injection sama sekali.
-    const PdfPrinter = require('pdfmake/src/printer');
-    const fontsObject = require('pdfmake/build/vfs_fonts');
-
-    const vfs: Record<string, string> =
-      fontsObject.pdfMake?.vfs ?? fontsObject.vfs ?? {};
-
-    const fonts = {
-      Roboto: {
-        normal: Buffer.from(vfs['Roboto-Regular.ttf'], 'base64'),
-        bold: Buffer.from(vfs['Roboto-Medium.ttf'], 'base64'),
-        italics: Buffer.from(vfs['Roboto-Italic.ttf'], 'base64'),
-        bolditalics: Buffer.from(vfs['Roboto-MediumItalic.ttf'], 'base64'),
-      },
-    };
-
-    const printer = new PdfPrinter(fonts);
-    // ─────────────────────────────────────────────────────────────────────────
 
     // Format tanggal Indonesia
     const formatDate = (date: Date | string | undefined): string => {
@@ -78,7 +65,6 @@ export class PdfGeneratorService {
 
     // Baris tabel konsumsi
     const tableRows: any[][] = [
-      // Header tabel
       [
         { text: 'No', style: 'tableHeader', alignment: 'center' },
         { text: 'Nama Obat', style: 'tableHeader' },
@@ -124,7 +110,6 @@ export class PdfGeneratorService {
       ]);
     });
 
-    // Kalau tidak ada data
     if (consumptions.length === 0) {
       tableRows.push([
         {
@@ -342,16 +327,14 @@ export class PdfGeneratorService {
       },
     };
 
+    // ── Generate PDF sebagai Buffer menggunakan getBuffer() callback ──────────
+    // getBuffer() adalah satu-satunya cara yang reliable untuk mendapat raw bytes
+    // di Node.js menggunakan pdfmake/build/pdfmake (v0.2.x).
     return new Promise((resolve, reject) => {
       try {
-        const pdfDoc = printer.createPdfKitDocument(docDefinition);
-        const chunks: Buffer[] = [];
-
-        pdfDoc.on('data', (chunk: Buffer) => chunks.push(chunk));
-        pdfDoc.on('end', () => resolve(global.Buffer.concat(chunks)));
-        pdfDoc.on('error', (err: any) => reject(err));
-
-        pdfDoc.end();
+        pdfMake.createPdf(docDefinition).getBuffer((buffer: Uint8Array) => {
+          resolve(Buffer.from(buffer));
+        });
       } catch (err) {
         reject(err);
       }
