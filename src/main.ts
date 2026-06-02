@@ -4,8 +4,10 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { join } from 'path';
+import * as dns from 'node:dns';
 
 async function bootstrap() {
+  dns.setDefaultResultOrder('ipv4first');
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.enableCors({
