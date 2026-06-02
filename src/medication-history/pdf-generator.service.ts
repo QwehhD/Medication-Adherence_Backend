@@ -23,17 +23,20 @@ const STATUS_COLORS: Record<ScheduleStatus, string> = {
 
 @Injectable()
 export class PdfGeneratorService {
-  private printer: any;
+  // Constructor dikosongkan total agar proses startup NestJS 100% aman dan lancar
+  constructor() {}
 
-  constructor() {
-    // Menggunakan require untuk core generator & virtual filesystem font bawaan pdfmake
-    const PdfPrinter = require('pdfmake');
+  async generateMedicationReport(data: PatientReportData): Promise<Buffer> {
+    const { patient, assignedDoctor, summary, consumptions, filter, generatedAt } = data;
+
+    // --- LAZY LOADING PDFMAKE (Hanya di-load saat method ini dipanggil) ---
+    // Cara ini menjamin jika pdfmake bermasalah di production, endpoint lain TIDAK AKAN IKUT CRASH.
+    const PdfPrinter = require('pdfmake/src/printer');
     const pdfMakeFonts = require('pdfmake/build/vfs_fonts');
 
-    // Daftarkan base64 font dari vfs_fonts langsung ke objek global pdfmake printer
+    // Registrasi Virtual File System Font secara aman
     PdfPrinter.vfs = pdfMakeFonts.pdfMake ? pdfMakeFonts.pdfMake.vfs : pdfMakeFonts.vfs;
 
-    // Definisikan pemetaan font menggunakan nama file virtual yang terdaftar di VFS
     const fonts = {
       Roboto: {
         normal: 'Roboto-Regular.ttf',
@@ -43,12 +46,8 @@ export class PdfGeneratorService {
       },
     };
 
-    // Inisialisasi printer server-side dengan VFS tanpa membaca physical directory node_modules
-    this.printer = new PdfPrinter(fonts);
-  }
-
-  async generateMedicationReport(data: PatientReportData): Promise<Buffer> {
-    const { patient, assignedDoctor, summary, consumptions, filter, generatedAt } = data;
+    // Buat instance printer lokal secara dinamis
+    const localPrinter = new PdfPrinter(fonts);
 
     // Format tanggal Indonesia
     const formatDate = (date: Date | string | undefined): string => {
@@ -332,7 +331,7 @@ export class PdfGeneratorService {
 
     return new Promise((resolve, reject) => {
       try {
-        const pdfDoc = this.printer.createPdfKitDocument(docDefinition);
+        const pdfDoc = localPrinter.createPdfKitDocument(docDefinition);
         const chunks: Buffer[] = [];
 
         pdfDoc.on('data', (chunk: Buffer) => chunks.push(chunk));
