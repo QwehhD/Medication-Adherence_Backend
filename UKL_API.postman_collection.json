@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Medication Adherence API Suite",
-    "description": "Combined and cleaned collection for Medication Adherence API and Patient Registration.",
+    "name": "Adherify API Collection",
+    "description": "UKL Medication Adherence API endpoints for Doctors and Patients",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
