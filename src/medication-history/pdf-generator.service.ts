@@ -3,6 +3,10 @@ import { TDocumentDefinitions, StyleDictionary } from 'pdfmake/interfaces';
 import { PatientReportData } from './medication-history.service';
 import { ScheduleStatus } from '@prisma/client';
 
+// Import dari berkas distribusi yang dijamin ikut terbungkus ke folder dist
+import * as pdfMake from 'pdfmake/build/pdfmake';
+import * as pdfMakeFonts from 'pdfmake/build/vfs_fonts';
+
 // Mapping status ke label bahasa Indonesia
 const STATUS_LABELS: Record<ScheduleStatus, string> = {
   PENDING: 'Menunggu',
@@ -23,19 +27,16 @@ const STATUS_COLORS: Record<ScheduleStatus, string> = {
 
 @Injectable()
 export class PdfGeneratorService {
-  // Constructor dikosongkan total agar proses startup NestJS 100% aman dan lancar
-  constructor() {}
+  constructor() {
+    const fontsObject = pdfMakeFonts as any;
+    
+    (pdfMake as any).vfs = fontsObject.pdfMake && fontsObject.pdfMake.vfs 
+      ? fontsObject.pdfMake.vfs 
+      : fontsObject.vfs;
+  }
 
   async generateMedicationReport(data: PatientReportData): Promise<Buffer> {
     const { patient, assignedDoctor, summary, consumptions, filter, generatedAt } = data;
-
-    // --- LAZY LOADING PDFMAKE (Hanya di-load saat method ini dipanggil) ---
-    // Cara ini menjamin jika pdfmake bermasalah di production, endpoint lain TIDAK AKAN IKUT CRASH.
-    const PdfPrinter = require('pdfmake/src/printer');
-    const pdfMakeFonts = require('pdfmake/build/vfs_fonts');
-
-    // Registrasi Virtual File System Font secara aman
-    PdfPrinter.vfs = pdfMakeFonts.pdfMake ? pdfMakeFonts.pdfMake.vfs : pdfMakeFonts.vfs;
 
     const fonts = {
       Roboto: {
@@ -45,9 +46,6 @@ export class PdfGeneratorService {
         bolditalics: 'Roboto-MediumItalic.ttf',
       },
     };
-
-    // Buat instance printer lokal secara dinamis
-    const localPrinter = new PdfPrinter(fonts);
 
     // Format tanggal Indonesia
     const formatDate = (date: Date | string | undefined): string => {
@@ -331,14 +329,14 @@ export class PdfGeneratorService {
 
     return new Promise((resolve, reject) => {
       try {
-        const pdfDoc = localPrinter.createPdfKitDocument(docDefinition);
-        const chunks: Buffer[] = [];
+        (pdfMake as any).fonts = fonts;
 
-        pdfDoc.on('data', (chunk: Buffer) => chunks.push(chunk));
-        pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
-        pdfDoc.on('error', reject);
+        const pdfDocGenerator = (pdfMake as any).createPdf(docDefinition);
 
-        pdfDoc.end();
+        pdfDocGenerator.getBuffer((buffer: any) => {
+          const nodeBuffer = global.Buffer.from(buffer as ArrayBuffer);
+          resolve(nodeBuffer);
+        });
       } catch (err) {
         reject(err);
       }
