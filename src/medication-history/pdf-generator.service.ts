@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { TDocumentDefinitions, StyleDictionary } from 'pdfmake/interfaces';
 import { PatientReportData } from './medication-history.service';
 import { ScheduleStatus } from '@prisma/client';
-import * as path from 'path';
 
 // Mapping status ke label bahasa Indonesia
 const STATUS_LABELS: Record<ScheduleStatus, string> = {
@@ -24,25 +23,27 @@ const STATUS_COLORS: Record<ScheduleStatus, string> = {
 
 @Injectable()
 export class PdfGeneratorService {
-  // Menggunakan tipe any untuk menghindari konflik deklarasi d.ts bawaan pdfmake yang broken
   private printer: any;
 
   constructor() {
-    // Membaca constructor asli server-side printer menggunakan require bawaan Node.js
+    // Menggunakan require untuk core generator & virtual filesystem font bawaan pdfmake
     const PdfPrinter = require('pdfmake');
-    
-    const fontPath = path.resolve(process.cwd(), 'node_modules/pdfmake/fonts');
+    const pdfMakeFonts = require('pdfmake/build/vfs_fonts');
 
+    // Daftarkan base64 font dari vfs_fonts langsung ke objek global pdfmake printer
+    PdfPrinter.vfs = pdfMakeFonts.pdfMake ? pdfMakeFonts.pdfMake.vfs : pdfMakeFonts.vfs;
+
+    // Definisikan pemetaan font menggunakan nama file virtual yang terdaftar di VFS
     const fonts = {
       Roboto: {
-        normal: path.join(fontPath, 'Roboto-Regular.ttf'),
-        bold: path.join(fontPath, 'Roboto-Medium.ttf'),
-        italics: path.join(fontPath, 'Roboto-Italic.ttf'),
-        bolditalics: path.join(fontPath, 'Roboto-MediumItalic.ttf'),
+        normal: 'Roboto-Regular.ttf',
+        bold: 'Roboto-Medium.ttf',
+        italics: 'Roboto-Italic.ttf',
+        bolditalics: 'Roboto-MediumItalic.ttf',
       },
     };
 
-    // Inisialisasi printer server-side secara native aman dari validasi strict TS
+    // Inisialisasi printer server-side dengan VFS tanpa membaca physical directory node_modules
     this.printer = new PdfPrinter(fonts);
   }
 
