@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Body, Controller, Get, Post, Query, UseGuards, Request } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { EmailVerificationService } from './email-verification.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -35,5 +36,15 @@ export class AuthController {
   async verifyEmail(@Query('token') token: string) {
     await this.emailVerification.verifyToken(token);
     return { message: 'Email verified successfully' };
+  }
+
+  @ApiOperation({ summary: 'Get Current User Profile (Protected)' })
+  @ApiResponse({ status: 200, description: 'Current user profile data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Missing or invalid token' })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me')
+  async getProfile(@Request() req: any) {
+    return this.authService.getUserProfile(req.user.id);
   }
 }

@@ -92,6 +92,14 @@
               "raw": "{\n  \"email\": \"patient@example.com\",\n  \"password\": \"password123\"\n}"
             }
           }
+        },
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token_doctor}}" }],
+            "url": "{{base_url}}/auth/me"
+          }
         }
       ]
     },

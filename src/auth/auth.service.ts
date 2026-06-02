@@ -66,4 +66,22 @@ export class AuthService {
 
     return { access_token: token };
   }
+
+  async getUserProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        role: true,
+        created_at: true,
+        email_verified_at: true,
+        patientProfile: true,
+      },
+    });
+
+    if (!user) throw new UnauthorizedException('User not found');
+    return user;
+  }
 }
