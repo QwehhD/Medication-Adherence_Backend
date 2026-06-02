@@ -19,16 +19,15 @@ export class EmailVerificationService {
   ) {
     this.transporter = nodemailer.createTransport({
       host: 'smtp-relay.brevo.com',
-      port: 587,
-      secure: false,
-      requireTLS: true,
-      connectionTimeout: 10000,
-      socketTimeout: 10000,
-      auth: {
+    port: 465,
+    secure: true, 
+    connectionTimeout: 10000,
+    socketTimeout: 10000,
+    auth: {
         user: this.config.get<string>('BREVO_USER'),
         pass: this.config.get<string>('BREVO_PASS'),
-      },
-    });
+  },
+});
   }
 
   async sendVerificationLink(email: string): Promise<void> {
