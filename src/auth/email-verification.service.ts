@@ -11,21 +11,28 @@ import * as nodemailer from 'nodemailer';
 @Injectable()
 export class EmailVerificationService {
   private readonly TOKEN_EXPIRY_MINUTES = 60;
-  private transporter: nodemailer.Transporter;
+  private transporter: nodemailer.Transporter | null = null;
 
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
-  ) {
-    this.transporter = nodemailer.createTransport({
-      host: this.config.get<string>('MAIL_HOST', 'smtp.gmail.com'),
-      port: this.config.get<number>('MAIL_PORT', 587),
-      secure: false,
-      auth: {
-        user: this.config.get<string>('MAIL_USER'),
-        pass: this.config.get<string>('MAIL_PASS'),
-      },
-    });
+  ) {}
+
+  private getTransporter(): nodemailer.Transporter {
+    if (!this.transporter) {
+      this.transporter = nodemailer.createTransport({
+        host: this.config.get<string>('MAIL_HOST', 'smtp.gmail.com'),
+        port: this.config.get<number>('MAIL_PORT', 587),
+        secure: false,
+        connectionTimeout: 5000,
+        socketTimeout: 5000,
+        auth: {
+          user: this.config.get<string>('MAIL_USER'),
+          pass: this.config.get<string>('MAIL_PASS'),
+        },
+      });
+    }
+    return this.transporter;
   }
 
   async sendVerificationLink(email: string): Promise<void> {
@@ -51,16 +58,23 @@ export class EmailVerificationService {
     const appUrl = this.config.get<string>('APP_URL') || this.config.get<string>('APP_URL2') || 'http://localhost:3000';
     const link = `${appUrl}/auth/verify-email?token=${token}`;
 
-    await this.transporter.sendMail({
-      from: this.config.get<string>('MAIL_FROM', `UKL App <${this.config.get('MAIL_USER')}>`),
-      to: email,
-      subject: 'Verifikasi Email Anda',
-      html: `
-        <p>Klik link berikut untuk verifikasi email Anda:</p>
-        <a href="${link}">${link}</a>
-        <p>Link berlaku selama ${this.TOKEN_EXPIRY_MINUTES} menit.</p>
-      `,
-    });
+    try {
+      const transporter = this.getTransporter();
+      await transporter.sendMail({
+        from: this.config.get<string>('MAIL_FROM', `UKL App <${this.config.get('MAIL_USER')}>`),
+        to: email,
+        subject: 'Verifikasi Email Anda',
+        html: `
+          <p>Klik link berikut untuk verifikasi email Anda:</p>
+          <a href="${link}">${link}</a>
+          <p>Link berlaku selama ${this.TOKEN_EXPIRY_MINUTES} menit.</p>
+        `,
+      });
+    } catch (error) {
+      throw new BadRequestException(
+        `Failed to send verification email: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
   }
 
   async verifyToken(token: string): Promise<void> {
