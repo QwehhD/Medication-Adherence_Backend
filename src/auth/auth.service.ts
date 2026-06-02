@@ -64,6 +64,8 @@ export class AuthService {
       role: user.role,
     });
 
+    localStorage.setItem("user", JSON.stringify(user));
+
     return { access_token: token };
   }
 }
