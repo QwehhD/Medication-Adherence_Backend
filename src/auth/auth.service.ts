@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { EmailVerificationService } from './email-verification.service';
+import { ClsService } from 'nestjs-cls';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private emailVerification: EmailVerificationService,
+    private cls: ClsService
   ) {}
 
   async register(dto: RegisterDto) {
@@ -64,8 +66,7 @@ export class AuthService {
       role: user.role,
     });
 
-    localStorage.setItem("user", JSON.stringify(user));
-
+    this.cls.set('user', user);
     return { access_token: token };
   }
 }

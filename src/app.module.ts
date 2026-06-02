@@ -10,9 +10,14 @@ import { PatientModule } from './patient/patient.module';
 import { DoctorModule } from './doctor/doctor.module';
 import { ReminderModule } from './reminder/reminder.module';
 import { HardwareModule } from './hardware/hardware.module';
+import { ClsModule } from 'nestjs-cls/dist/src/lib/cls-module/cls.module';
 
 @Module({
   imports: [
+    ClsModule.forRoot({
+      global: true,
+      middleware: { mount: true },
+    }),
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
     PrismaModule,
