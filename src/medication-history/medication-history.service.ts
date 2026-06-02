@@ -3,8 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ScheduleStatus } from '@prisma/client';
 
 export interface MedicationHistoryFilter {
-  startDate?: Date;
-  endDate?: Date;
+  startDate?: Date | string;
+  endDate?: Date | string;
   status?: ScheduleStatus;
 }
 
@@ -86,16 +86,25 @@ export class MedicationHistoryService {
       patient_id: patientId,
     };
 
+    const formattedFilter: { startDate?: Date; endDate?: Date; status?: ScheduleStatus } = {
+      status: filter.status,
+    };
+
     if (filter.startDate || filter.endDate) {
       whereConsumption.created_at = {};
+      
       if (filter.startDate) {
-        whereConsumption.created_at.gte = filter.startDate;
+        const startOfDate = new Date(filter.startDate);
+        whereConsumption.created_at.gte = startOfDate;
+        formattedFilter.startDate = startOfDate;
       }
+      
       if (filter.endDate) {
-        // Inklusif sampai akhir hari
-        const endOfDay = new Date(filter.endDate);
-        endOfDay.setHours(23, 59, 59, 999);
-        whereConsumption.created_at.lte = endOfDay;
+        // Inklusif sampai akhir hari (23:59:59.999)
+        const endOfDate = new Date(filter.endDate);
+        endOfDate.setHours(23, 59, 59, 999);
+        whereConsumption.created_at.lte = endOfDate;
+        formattedFilter.endDate = endOfDate;
       }
     }
 
@@ -139,7 +148,7 @@ export class MedicationHistoryService {
     const complianceRate =
       denominator > 0 ? Math.round((approved / denominator) * 100) : 0;
 
-    // 5. Map ke format yang dibutuhkan
+    // 5. Map ke format yang dibutuhkan oleh PDF Generator
     const consumptionRecords: ConsumptionRecord[] = consumptions.map((c) => ({
       id: c.id,
       medicineName: c.schedule?.medicine?.name ?? 'Obat Tidak Diketahui',
@@ -170,7 +179,7 @@ export class MedicationHistoryService {
             email: profile.assigned_doctor.email,
           }
         : undefined,
-      filter,
+      filter: formattedFilter,
       summary: {
         total,
         approved,
