@@ -6,29 +6,15 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomBytes } from 'crypto';
-import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class EmailVerificationService {
   private readonly TOKEN_EXPIRY_MINUTES = 60;
-  private transporter: nodemailer.Transporter;
 
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
-  ) {
-    this.transporter = nodemailer.createTransport({
-      host: 'smtp-relay.brevo.com',
-    port: 465,
-    secure: true, 
-    connectionTimeout: 10000,
-    socketTimeout: 10000,
-    auth: {
-        user: this.config.get<string>('BREVO_USER'),
-        pass: this.config.get<string>('BREVO_PASS'),
-  },
-});
-  }
+  ) {}
 
   async sendVerificationLink(email: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { email } });
@@ -54,16 +40,35 @@ export class EmailVerificationService {
     const link = `${appUrl}/auth/verify-email?token=${token}`;
 
     try {
-      await this.transporter.sendMail({
-        from: this.config.get<string>('MAIL_FROM'),
-        to: email,
-        subject: 'Verifikasi Email Anda',
-        html: `
-          <p>Klik link berikut untuk verifikasi email Anda:</p>
-          <a href="${link}">${link}</a>
-          <p>Link berlaku selama ${this.TOKEN_EXPIRY_MINUTES} menit.</p>
-        `,
-      });
+      const brevoApiKey = this.config.get<string>('BREVO_API_KEY');
+      if (!brevoApiKey) {
+        throw new BadRequestException('BREVO_API_KEY is not configured');
+      }
+
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': brevoApiKey,
+        },
+      body: JSON.stringify({
+          sender: {
+            name: this.config.get<string>('MAIL_FROM_NAME') || 'Adherify',
+            email: this.config.get<string>('MAIL_FROM_EMAIL'),
+          },
+          to: [{ email }],
+          subject: 'Verifikasi Email Anda',
+          htmlContent: `
+            <p>Klik link berikut untuk verifikasi email Anda:</p>
+            <a href="${link}">${link}</a>
+            <p>Link berlaku selama ${this.TOKEN_EXPIRY_MINUTES} menit.</p>
+          `,
+        }),
+    });
+      if (!response.ok) {
+        const errBody = await response.json();
+        throw new Error(errBody.message || 'Brevo API error');
+      }
     } catch (error) {
       throw new BadRequestException(
         `Failed to send verification email: ${error instanceof Error ? error.message : 'Unknown error'}`,
