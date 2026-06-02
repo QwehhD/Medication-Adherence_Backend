@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { AuthService } from './auth.service';
 import { EmailVerificationService } from './email-verification.service';
 import { RegisterDto } from './dto/register.dto';
+import { RegisterPatientDto } from './dto/register-patient.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -26,6 +27,13 @@ export class AuthController {
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  @ApiOperation({ summary: 'Patient self-registration with complete profile' })
+  @ApiResponse({ status: 201, description: 'Patient registered with profile, verification email sent' })
+  @Post('register-patient')
+  registerPatient(@Body() dto: RegisterPatientDto) {
+    return this.authService.registerPatient(dto);
   }
 
   @ApiOperation({ summary: 'Login and receive JWT access token' })

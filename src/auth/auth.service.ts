@@ -8,6 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
+import { RegisterPatientDto } from './dto/register-patient.dto';
 import { LoginDto } from './dto/login.dto';
 import { EmailVerificationService } from './email-verification.service';
 import * as bcrypt from 'bcrypt';
@@ -71,6 +72,59 @@ export class AuthService {
     const { password: _pw, ...result } = user;
     return {
       message: 'Registration successful. Please verify your email.',
+      user: result,
+    };
+  }
+
+  async registerPatient(dto: RegisterPatientDto) {
+    const exists = await this.prisma.user.findFirst({
+      where: { email: dto.email },
+    });
+    if (exists) throw new ConflictException('Email already registered');
+
+    // Validate doctorId if provided
+    let assignedDoctorId: string | null = null;
+    if (dto.doctorId) {
+      const doctor = await this.prisma.user.findUnique({
+        where: { id: dto.doctorId },
+      });
+      if (!doctor) throw new BadRequestException('Doctor not found');
+      if (doctor.role !== Role.DOCTOR) throw new BadRequestException('Selected user is not a doctor');
+      assignedDoctorId = dto.doctorId;
+    }
+
+    const hashed = await bcrypt.hash(dto.password, 12);
+    const baseUsername = dto.full_name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    let username = baseUsername;
+    let suffix = 1;
+    while (await this.prisma.user.findUnique({ where: { username } })) {
+      username = `${baseUsername}${suffix++}`;
+    }
+
+    const user = await this.prisma.user.create({
+      data: {
+        email: dto.email,
+        username,
+        password: hashed,
+        role: Role.PATIENT,
+        patientProfile: {
+          create: {
+            assigned_doctor_id: assignedDoctorId,
+            full_name: dto.full_name,
+            age: dto.age,
+            main_disease: dto.main_disease,
+            whatsapp_number: dto.whatsapp_number,
+          },
+        },
+      },
+      include: { patientProfile: true },
+    });
+
+    await this.emailVerification.sendVerificationLink(user.email);
+
+    const { password: _pw, ...result } = user;
+    return {
+      message: 'Patient registration successful. Please verify your email.',
       user: result,
     };
   }
