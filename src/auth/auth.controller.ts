@@ -14,6 +14,13 @@ export class AuthController {
     private emailVerification: EmailVerificationService,
   ) {}
 
+  @ApiOperation({ summary: 'Get all doctors (for patient registration selection)' })
+  @ApiResponse({ status: 200, description: 'List of doctors' })
+  @Get('doctors')
+  getDoctors() {
+    return this.authService.getDoctors();
+  }
+
   @ApiOperation({ summary: 'Register a new user (DOCTOR or PATIENT)' })
   @ApiResponse({ status: 201, description: 'User registered, verification email sent' })
   @Post('register')

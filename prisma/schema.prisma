@@ -20,6 +20,7 @@ model User {
   patientProfile        PatientProfile?
   schedulesAsDoctor     Schedule[]              @relation("DoctorSchedules")
   schedulesAsPatient    Schedule[]              @relation("PatientSchedules")
+  patientsAssigned      PatientProfile[]        @relation("PatientAssignedDoctor")
 }
 
 model EmailVerification {
@@ -33,14 +34,16 @@ model EmailVerification {
 }
 
 model PatientProfile {
-  id              String    @id @default(uuid())
-  user_id         String    @unique
-  full_name       String
-  age             Int
-  main_disease    String
-  whatsapp_number String
-  deleted_at      DateTime?
-  user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  id                  String    @id @default(uuid())
+  user_id             String    @unique
+  assigned_doctor_id  String?
+  full_name           String
+  age                 Int
+  main_disease        String
+  whatsapp_number     String
+  deleted_at          DateTime?
+  user                User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  assigned_doctor     User?     @relation("PatientAssignedDoctor", fields: [assigned_doctor_id], references: [id], onDelete: SetNull)
 }
 
 model Medicine {

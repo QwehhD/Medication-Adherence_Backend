@@ -3,6 +3,7 @@ import {
   Injectable,
   UnauthorizedException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -10,6 +11,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { EmailVerificationService } from './email-verification.service';
 import * as bcrypt from 'bcrypt';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -32,9 +34,37 @@ export class AuthService {
     });
     if (usernameTaken) throw new ConflictException('Username already taken');
 
+    // Validate doctorId if provided (only for PATIENT role)
+    let assignedDoctorId: string | null = null;
+    if (dto.role === Role.PATIENT) {
+      if (dto.doctorId) {
+        const doctor = await this.prisma.user.findUnique({
+          where: { id: dto.doctorId },
+        });
+        if (!doctor) throw new BadRequestException('Doctor not found');
+        if (doctor.role !== Role.DOCTOR) throw new BadRequestException('Selected user is not a doctor');
+        assignedDoctorId = dto.doctorId;
+      }
+    }
+
     const user = await this.prisma.user.create({
       data: { email: dto.email, username: dto.username, password: hashed, role: dto.role },
     });
+
+    // If PATIENT, auto-assign doctor to themselves if they're registering as doctor
+    // If DOCTOR, create patient profile with themselves as assigned doctor
+    if (dto.role === Role.PATIENT) {
+      await this.prisma.patientProfile.create({
+        data: {
+          user_id: user.id,
+          assigned_doctor_id: assignedDoctorId,
+          full_name: '',
+          age: 0,
+          main_disease: '',
+          whatsapp_number: '',
+        },
+      });
+    }
 
     await this.emailVerification.sendVerificationLink(user.email);
 
@@ -43,6 +73,17 @@ export class AuthService {
       message: 'Registration successful. Please verify your email.',
       user: result,
     };
+  }
+
+  async getDoctors() {
+    return this.prisma.user.findMany({
+      where: { role: Role.DOCTOR },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+      },
+    });
   }
 
   async login(dto: LoginDto) {
