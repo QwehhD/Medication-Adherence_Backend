@@ -10,16 +10,29 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as Express from 'express';
+import { IsOptional, IsEnum, IsDateString } from 'class-validator';
+import { ScheduleStatus } from '@prisma/client';
 import { MedicationHistoryService } from './medication-history.service';
 import { PdfGeneratorService } from './pdf-generator.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 
+// ===== DTO DENGAN VALIDATOR (Menghilangkan Error Bad Request) =====
 export class MedicationHistoryQueryDto {
-  startDate?: string;   // ISO date string, e.g. "2024-01-01"
-  endDate?: string;     // ISO date string, e.g. "2024-12-31"
-  status?: string;      // APPROVED | REJECTED | WAITING_VERIFICATION | etc.
+  @IsOptional()
+  @IsDateString({}, { message: 'startDate harus berupa format tanggal ISO 8601 yang valid (YYYY-MM-DD)' })
+  startDate?: string;
+
+  @IsOptional()
+  @IsDateString({}, { message: 'endDate harus berupa format tanggal ISO 8601 yang valid (YYYY-MM-DD)' })
+  endDate?: string;
+
+  @IsOptional()
+  @IsEnum(ScheduleStatus, {
+    message: 'Status harus berupa salah satu dari: PENDING, WAITING_VERIFICATION, APPROVED, REJECTED, MISSED',
+  })
+  status?: ScheduleStatus;
 }
 
 @Controller('medication-history')
@@ -57,7 +70,7 @@ export class MedicationHistoryController {
       {
         startDate: query.startDate ? new Date(query.startDate) : undefined,
         endDate: query.endDate ? new Date(query.endDate) : undefined,
-        status: query.status as any,
+        status: query.status,
       },
     );
 
@@ -101,7 +114,7 @@ export class MedicationHistoryController {
     return this.medicationHistoryService.getPatientReportData(patientId, {
       startDate: query.startDate ? new Date(query.startDate) : undefined,
       endDate: query.endDate ? new Date(query.endDate) : undefined,
-      status: query.status as any,
+      status: query.status,
     });
   }
 }

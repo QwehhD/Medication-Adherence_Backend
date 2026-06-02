@@ -139,7 +139,7 @@ export class MedicationHistoryService {
     const complianceRate =
       denominator > 0 ? Math.round((approved / denominator) * 100) : 0;
 
-    // 5. Map ke format yang dibutuhkan (Amankan properti berantai)
+    // 5. Map ke format yang dibutuhkan
     const consumptionRecords: ConsumptionRecord[] = consumptions.map((c) => ({
       id: c.id,
       medicineName: c.schedule?.medicine?.name ?? 'Obat Tidak Diketahui',
