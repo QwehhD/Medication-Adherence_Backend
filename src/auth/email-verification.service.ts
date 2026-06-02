@@ -11,34 +11,29 @@ import * as nodemailer from 'nodemailer';
 @Injectable()
 export class EmailVerificationService {
   private readonly TOKEN_EXPIRY_MINUTES = 60;
-  private transporter: nodemailer.Transporter | null = null;
+  private transporter: nodemailer.Transporter;
 
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
-  ) {}
-
-  private getTransporter(): nodemailer.Transporter {
-    if (!this.transporter) {
-      this.transporter = nodemailer.createTransport({
-        host: this.config.get<string>('MAIL_HOST', 'smtp.gmail.com'),
-        port: this.config.get<number>('MAIL_PORT', 587),
-        secure: false,
-        connectionTimeout: 5000,
-        socketTimeout: 5000,
-        auth: {
-          user: this.config.get<string>('MAIL_USER'),
-          pass: this.config.get<string>('MAIL_PASS'),
-        },
-      });
-    }
-    return this.transporter;
+  ) {
+    this.transporter = nodemailer.createTransport({
+      host: 'smtp-relay.brevo.com',
+      port: 587,
+      secure: false,
+      requireTLS: true,
+      connectionTimeout: 10000,
+      socketTimeout: 10000,
+      auth: {
+        user: this.config.get<string>('BREVO_USER'),
+        pass: this.config.get<string>('BREVO_PASS'),
+      },
+    });
   }
 
   async sendVerificationLink(email: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) throw new NotFoundException('User not found');
-
     if (user.email_verified_at) {
       throw new BadRequestException('Email already verified');
     }
@@ -55,13 +50,13 @@ export class EmailVerificationService {
       data: { user_id: user.id, token, expires_at: expiresAt },
     });
 
-    const appUrl = this.config.get<string>('APP_URL') || this.config.get<string>('APP_URL2') || 'http://localhost:3000';
+    const appUrl =
+      this.config.get<string>('APP_URL') || 'http://localhost:3000';
     const link = `${appUrl}/auth/verify-email?token=${token}`;
 
     try {
-      const transporter = this.getTransporter();
-      await transporter.sendMail({
-        from: this.config.get<string>('MAIL_FROM', `UKL App <${this.config.get('MAIL_USER')}>`),
+      await this.transporter.sendMail({
+        from: this.config.get<string>('MAIL_FROM'),
         to: email,
         subject: 'Verifikasi Email Anda',
         html: `
@@ -81,15 +76,12 @@ export class EmailVerificationService {
     const verification = await this.prisma.emailVerification.findUnique({
       where: { token },
     });
-
     if (!verification || verification.used_at) {
       throw new BadRequestException('Invalid or already used verification link');
     }
-
     if (verification.expires_at < new Date()) {
       throw new BadRequestException('Verification link has expired');
     }
-
     await this.prisma.$transaction([
       this.prisma.emailVerification.update({
         where: { id: verification.id },
