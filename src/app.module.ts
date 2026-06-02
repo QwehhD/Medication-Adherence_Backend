@@ -11,6 +11,7 @@ import { DoctorModule } from './doctor/doctor.module';
 import { ReminderModule } from './reminder/reminder.module';
 import { HardwareModule } from './hardware/hardware.module';
 import { ClsModule } from 'nestjs-cls/dist/src/lib/cls-module/cls.module';
+import { MedicationHistoryModule } from './medication-history/medication-history.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ClsModule } from 'nestjs-cls/dist/src/lib/cls-module/cls.module';
     DoctorModule,
     ReminderModule,
     HardwareModule,
+    MedicationHistoryModule,
   ],
 })
 export class AppModule {}

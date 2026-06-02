@@ -378,6 +378,29 @@
           }
         }
       ]
+    },
+    {
+      "name": "Shared - Medication History",
+      "item": [
+        {
+          "name": "Get Medication History (JSON)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token_doctor}}" }],
+            "url": "{{base_url}}/medication-history/:patientId?startDate=2024-01-01&endDate=2024-12-31&status=APPROVED",
+            "variable": [{ "key": "patientId", "value": "PATIENT_ID_HERE" }]
+          }
+        },
+        {
+          "name": "Download Medication History (PDF)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token_doctor}}" }],
+            "url": "{{base_url}}/medication-history/:patientId/pdf?startDate=2024-01-01&endDate=2024-12-31",
+            "variable": [{ "key": "patientId", "value": "PATIENT_ID_HERE" }]
+          }
+        }
+      ]
     }
   ],
   "variable": [
