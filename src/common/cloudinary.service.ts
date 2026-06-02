@@ -24,13 +24,17 @@ export class CloudinaryService {
         },
         (error, result) => {
           if (error) {
-            reject(error);
-          } else {
-            resolve({
-              url: result.secure_url,
-              publicId: result.public_id,
-            });
+            return reject(error);
+          } 
+          
+          if (!result) {
+            return reject(new Error('Cloudinary upload result is undefined'));
           }
+
+          return resolve({
+            url: result.secure_url,
+            publicId: result.public_id,
+          });
         },
       );
 
