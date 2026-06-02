@@ -1,18 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import * as PdfPrinter from 'pdfmake';
-import { TDocumentDefinitions, Content, StyleDictionary } from 'pdfmake/interfaces';
+import { TDocumentDefinitions, StyleDictionary } from 'pdfmake/interfaces';
 import { PatientReportData } from './medication-history.service';
 import { ScheduleStatus } from '@prisma/client';
-
-// pdfmake pakai font virtual filesystem
-const fonts = {
-  Roboto: {
-    normal: 'node_modules/pdfmake/build/vfs_fonts.js',
-    bold: 'node_modules/pdfmake/build/vfs_fonts.js',
-    italics: 'node_modules/pdfmake/build/vfs_fonts.js',
-    bolditalics: 'node_modules/pdfmake/build/vfs_fonts.js',
-  },
-};
+import * as path from 'path';
 
 // Mapping status ke label bahasa Indonesia
 const STATUS_LABELS: Record<ScheduleStatus, string> = {
@@ -34,20 +25,24 @@ const STATUS_COLORS: Record<ScheduleStatus, string> = {
 
 @Injectable()
 export class PdfGeneratorService {
-  private printer: any;
+  private printer: PdfPrinter;
 
   constructor() {
-    // pdfmake/build/vfs_fonts harus diload agar font tersedia
-    const pdfMake = require('pdfmake');
-    const vfsFonts = require('pdfmake/build/vfs_fonts');
-    this.printer = new pdfMake({
+    // Di server-side (Node.js), pdfmake lebih stabil membaca langsung file font TTF asli 
+    // daripada mengekstrak base64 dari file build virtual filesystem vfs_fonts.js
+    const fontPath = path.resolve(process.cwd(), 'node_modules/pdfmake/fonts');
+
+    const fonts = {
       Roboto: {
-        normal: Buffer.from(vfsFonts.pdfMake.vfs['Roboto-Regular.ttf'], 'base64'),
-        bold: Buffer.from(vfsFonts.pdfMake.vfs['Roboto-Medium.ttf'], 'base64'),
-        italics: Buffer.from(vfsFonts.pdfMake.vfs['Roboto-Italic.ttf'], 'base64'),
-        bolditalics: Buffer.from(vfsFonts.pdfMake.vfs['Roboto-MediumItalic.ttf'], 'base64'),
+        normal: path.join(fontPath, 'Roboto-Regular.ttf'),
+        bold: path.join(fontPath, 'Roboto-Medium.ttf'),
+        italics: path.join(fontPath, 'Roboto-Italic.ttf'),
+        bolditalics: path.join(fontPath, 'Roboto-MediumItalic.ttf'),
       },
-    });
+    };
+
+    // Inisialisasi printer server-side secara native
+    this.printer = new PdfPrinter(fonts);
   }
 
   async generateMedicationReport(data: PatientReportData): Promise<Buffer> {
@@ -354,9 +349,9 @@ export class PdfGeneratorService {
     value: string,
     textColor: string,
     bgColor: string,
-  ): any { // Changed to any to allow the structural wrapping without interface conflicts
+  ): any {
     return {
-      width: '*', // TypeScript is happy now because this wrapper object represents a Column layout entry
+      width: '*',
       stack: [
         {
           canvas: [

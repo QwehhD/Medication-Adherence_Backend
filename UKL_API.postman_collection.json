@@ -380,7 +380,7 @@
       ]
     },
     {
-      "name": "Shared - Medication History",
+      "name": "Medication History",
       "item": [
         {
           "name": "Get Medication History (JSON)",

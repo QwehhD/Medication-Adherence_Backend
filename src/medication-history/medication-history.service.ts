@@ -60,7 +60,7 @@ export class MedicationHistoryService {
     patientId: string,
     filter: MedicationHistoryFilter = {},
   ): Promise<PatientReportData> {
-    // Ambil user + profil pasien
+    // 1. Ambil user + profil pasien
     const user = await this.prisma.user.findUnique({
       where: { id: patientId },
       include: {
@@ -81,7 +81,7 @@ export class MedicationHistoryService {
       throw new NotFoundException('Profil pasien tidak ditemukan');
     }
 
-    // Build where clause untuk filter tanggal & status
+    // 2. Build where clause untuk filter tanggal & status
     const whereConsumption: any = {
       patient_id: patientId,
     };
@@ -103,7 +103,7 @@ export class MedicationHistoryService {
       whereConsumption.verification_status = filter.status;
     }
 
-    // Ambil semua konsumsi beserta relasi
+    // 3. Ambil semua konsumsi beserta relasi
     const consumptions = await this.prisma.medicationConsumption.findMany({
       where: whereConsumption,
       include: {
@@ -119,7 +119,7 @@ export class MedicationHistoryService {
       },
     });
 
-    // Hitung summary
+    // 4. Hitung summary data
     const total = consumptions.length;
     const approved = consumptions.filter(
       (c) => c.verification_status === 'APPROVED',
@@ -139,12 +139,12 @@ export class MedicationHistoryService {
     const complianceRate =
       denominator > 0 ? Math.round((approved / denominator) * 100) : 0;
 
-    // Map ke format yang dibutuhkan
+    // 5. Map ke format yang dibutuhkan (Amankan properti berantai)
     const consumptionRecords: ConsumptionRecord[] = consumptions.map((c) => ({
       id: c.id,
-      medicineName: c.schedule.medicine.name,
-      dose: c.schedule.dose,
-      scheduledTime: c.schedule.time,
+      medicineName: c.schedule?.medicine?.name ?? 'Obat Tidak Diketahui',
+      dose: c.schedule?.dose ?? '-',
+      scheduledTime: c.schedule?.time ?? '--:--',
       consumedAt: c.created_at,
       verificationStatus: c.verification_status,
       verifiedAt: c.verified_at ?? undefined,
