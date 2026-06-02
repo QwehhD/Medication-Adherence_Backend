@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import * as PdfPrinter from 'pdfmake';
 import { TDocumentDefinitions, StyleDictionary } from 'pdfmake/interfaces';
 import { PatientReportData } from './medication-history.service';
 import { ScheduleStatus } from '@prisma/client';
 import * as path from 'path';
+
+// pdfmake exports its constructor as a CJS default export.
+// @types/pdfmake doesn't declare a constructable class, so we use require().
+const PdfPrinter = require('pdfmake');
 
 // Mapping status ke label bahasa Indonesia
 const STATUS_LABELS: Record<ScheduleStatus, string> = {
@@ -25,7 +28,7 @@ const STATUS_COLORS: Record<ScheduleStatus, string> = {
 
 @Injectable()
 export class PdfGeneratorService {
-  private printer: PdfPrinter;
+  private printer: any;
 
   constructor() {
     // Di server-side (Node.js), pdfmake lebih stabil membaca langsung file font TTF asli 
