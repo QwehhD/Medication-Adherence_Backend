@@ -13,6 +13,14 @@
       "name": "Auth",
       "item": [
         {
+          "name": "Get All Doctors (for registration)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/auth/doctors"
+          }
+        },
+        {
           "name": "Register Doctor",
           "request": {
             "method": "POST",
@@ -25,14 +33,26 @@
           }
         },
         {
-          "name": "Register Patient",
+          "name": "Register Patient (with assigned doctor)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{base_url}}/auth/register",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"patient@example.com\",\n  \"username\": \"patient_jane\",\n  \"password\": \"password123\",\n  \"role\": \"PATIENT\"\n}"
+              "raw": "{\n  \"email\": \"patient@example.com\",\n  \"username\": \"patient_jane\",\n  \"password\": \"password123\",\n  \"role\": \"PATIENT\",\n  \"doctorId\": \"DOCTOR_ID_FROM_DOCTORS_LIST_HERE\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register Patient (without assigned doctor)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"patient2@example.com\",\n  \"username\": \"patient_alex\",\n  \"password\": \"password123\",\n  \"role\": \"PATIENT\"\n}"
             }
           }
         },
