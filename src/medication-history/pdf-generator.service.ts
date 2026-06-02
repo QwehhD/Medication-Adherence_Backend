@@ -3,9 +3,6 @@ import { TDocumentDefinitions, StyleDictionary } from 'pdfmake/interfaces';
 import { PatientReportData } from './medication-history.service';
 import { ScheduleStatus } from '@prisma/client';
 
-// Gunakan impor yang terbukti aman untuk arsitektur server-side Node.js
-import * as pdfMakeFonts from 'pdfmake/build/vfs_fonts';
-
 // Mapping status ke label bahasa Indonesia
 const STATUS_LABELS: Record<ScheduleStatus, string> = {
   PENDING: 'Menunggu',
@@ -31,31 +28,26 @@ export class PdfGeneratorService {
   async generateMedicationReport(data: PatientReportData): Promise<Buffer> {
     const { patient, assignedDoctor, summary, consumptions, filter, generatedAt } = data;
 
-    // --- SOLUSI ABSOLUT SERVER-SIDE RUNTIME ---
-    // Menggunakan require langsung ke core printer internal tepat saat fungsi dipanggil.
-    // Ini menghindari isu window/document undefined dari file bundle browser.
-    const { PdfPrinter } = require('pdfmake');
+    // ── SOLUSI SERVER-SIDE ────────────────────────────────────────────────────
+    // Gunakan pdfmake/src/printer (raw Node.js printer, bukan browser bundle).
+    // Font dikirim sebagai Buffer langsung — tidak perlu VFS injection sama sekali.
+    const PdfPrinter = require('pdfmake/src/printer');
+    const fontsObject = require('pdfmake/build/vfs_fonts');
 
-    // Ambil VFS font secara aman tanpa bentrok type string
-    const fontsObject = pdfMakeFonts as any;
-    const vfs = fontsObject.pdfMake && fontsObject.pdfMake.vfs 
-      ? fontsObject.pdfMake.vfs 
-      : fontsObject.vfs;
-
-    // Injeksi VFS langsung ke constructor Printer utama
-    PdfPrinter.vfs = vfs;
+    const vfs: Record<string, string> =
+      fontsObject.pdfMake?.vfs ?? fontsObject.vfs ?? {};
 
     const fonts = {
       Roboto: {
-        normal: 'Roboto-Regular.ttf',
-        bold: 'Roboto-Medium.ttf',
-        italics: 'Roboto-Italic.ttf',
-        bolditalics: 'Roboto-MediumItalic.ttf',
+        normal: Buffer.from(vfs['Roboto-Regular.ttf'], 'base64'),
+        bold: Buffer.from(vfs['Roboto-Medium.ttf'], 'base64'),
+        italics: Buffer.from(vfs['Roboto-Italic.ttf'], 'base64'),
+        bolditalics: Buffer.from(vfs['Roboto-MediumItalic.ttf'], 'base64'),
       },
     };
 
-    // Buat instance printer khusus Node.js environment
     const printer = new PdfPrinter(fonts);
+    // ─────────────────────────────────────────────────────────────────────────
 
     // Format tanggal Indonesia
     const formatDate = (date: Date | string | undefined): string => {
@@ -114,7 +106,12 @@ export class PdfGeneratorService {
         { text: c.medicineName, style: 'tableCell' },
         { text: c.dose, alignment: 'center', style: 'tableCell' },
         { text: c.scheduledTime, alignment: 'center', style: 'tableCell' },
-        { text: formatDateTime(c.consumedAt), alignment: 'center', style: 'tableCell', fontSize: 8 },
+        {
+          text: formatDateTime(c.consumedAt),
+          alignment: 'center',
+          style: 'tableCell',
+          fontSize: 8,
+        },
         {
           text: statusLabel,
           alignment: 'center',
@@ -275,8 +272,16 @@ export class PdfGeneratorService {
             this.buildStatCard(
               'Tingkat Kepatuhan',
               `${summary.complianceRate}%`,
-              summary.complianceRate >= 80 ? '#3B6D11' : summary.complianceRate >= 60 ? '#BA7517' : '#A32D2D',
-              summary.complianceRate >= 80 ? '#EAF3DE' : summary.complianceRate >= 60 ? '#FAEEDA' : '#FCEBEB',
+              summary.complianceRate >= 80
+                ? '#3B6D11'
+                : summary.complianceRate >= 60
+                  ? '#BA7517'
+                  : '#A32D2D',
+              summary.complianceRate >= 80
+                ? '#EAF3DE'
+                : summary.complianceRate >= 60
+                  ? '#FAEEDA'
+                  : '#FCEBEB',
             ),
           ],
           columnGap: 8,
@@ -339,7 +344,6 @@ export class PdfGeneratorService {
 
     return new Promise((resolve, reject) => {
       try {
-        // Eksekusi pembuatan document menggunakan native stream printer Node.js
         const pdfDoc = printer.createPdfKitDocument(docDefinition);
         const chunks: Buffer[] = [];
 
