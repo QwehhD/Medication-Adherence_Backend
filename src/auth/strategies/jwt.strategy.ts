@@ -3,11 +3,13 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ClsService } from 'nestjs-cls';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     config: ConfigService,
+    private cls: ClsService,
     private prisma: PrismaService,
   ) {
     super({
@@ -22,6 +24,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
     if (!user) throw new UnauthorizedException();
     const { password: _pw, ...result } = user;
+    const { password, ...userWithoutPassword } = user;
+    this.cls.set('user', userWithoutPassword);
     return result;
   }
 }
