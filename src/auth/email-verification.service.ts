@@ -48,7 +48,7 @@ export class EmailVerificationService {
       data: { user_id: user.id, token, expires_at: expiresAt },
     });
 
-    const appUrl = this.config.get<string>('APP_URL', 'http://localhost:3000');
+    const appUrl = this.config.get<string>('APP_URL', '');
     const link = `${appUrl}/auth/verify-email?token=${token}`;
 
     await this.transporter.sendMail({
