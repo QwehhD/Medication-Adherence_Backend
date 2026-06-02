@@ -3,8 +3,7 @@ import { TDocumentDefinitions, StyleDictionary } from 'pdfmake/interfaces';
 import { PatientReportData } from './medication-history.service';
 import { ScheduleStatus } from '@prisma/client';
 
-// Import dari berkas distribusi yang dijamin ikut terbungkus ke folder dist
-import * as pdfMake from 'pdfmake/build/pdfmake';
+// Gunakan impor yang terbukti aman untuk arsitektur server-side Node.js
 import * as pdfMakeFonts from 'pdfmake/build/vfs_fonts';
 
 // Mapping status ke label bahasa Indonesia
@@ -27,16 +26,24 @@ const STATUS_COLORS: Record<ScheduleStatus, string> = {
 
 @Injectable()
 export class PdfGeneratorService {
-  constructor() {
-    const fontsObject = pdfMakeFonts as any;
-    
-    (pdfMake as any).vfs = fontsObject.pdfMake && fontsObject.pdfMake.vfs 
-      ? fontsObject.pdfMake.vfs 
-      : fontsObject.vfs;
-  }
+  constructor() {}
 
   async generateMedicationReport(data: PatientReportData): Promise<Buffer> {
     const { patient, assignedDoctor, summary, consumptions, filter, generatedAt } = data;
+
+    // --- SOLUSI ABSOLUT SERVER-SIDE RUNTIME ---
+    // Menggunakan require langsung ke core printer internal tepat saat fungsi dipanggil.
+    // Ini menghindari isu window/document undefined dari file bundle browser.
+    const PdfPrinter = require('pdfmake');
+
+    // Ambil VFS font secara aman tanpa bentrok type string
+    const fontsObject = pdfMakeFonts as any;
+    const vfs = fontsObject.pdfMake && fontsObject.pdfMake.vfs 
+      ? fontsObject.pdfMake.vfs 
+      : fontsObject.vfs;
+
+    // Injeksi VFS langsung ke constructor Printer utama
+    PdfPrinter.vfs = vfs;
 
     const fonts = {
       Roboto: {
@@ -46,6 +53,9 @@ export class PdfGeneratorService {
         bolditalics: 'Roboto-MediumItalic.ttf',
       },
     };
+
+    // Buat instance printer khusus Node.js environment
+    const printer = new PdfPrinter(fonts);
 
     // Format tanggal Indonesia
     const formatDate = (date: Date | string | undefined): string => {
@@ -329,14 +339,15 @@ export class PdfGeneratorService {
 
     return new Promise((resolve, reject) => {
       try {
-        (pdfMake as any).fonts = fonts;
+        // Eksekusi pembuatan document menggunakan native stream printer Node.js
+        const pdfDoc = printer.createPdfKitDocument(docDefinition);
+        const chunks: Buffer[] = [];
 
-        const pdfDocGenerator = (pdfMake as any).createPdf(docDefinition);
+        pdfDoc.on('data', (chunk: Buffer) => chunks.push(chunk));
+        pdfDoc.on('end', () => resolve(global.Buffer.concat(chunks)));
+        pdfDoc.on('error', (err: any) => reject(err));
 
-        pdfDocGenerator.getBuffer((buffer: any) => {
-          const nodeBuffer = global.Buffer.from(buffer as ArrayBuffer);
-          resolve(nodeBuffer);
-        });
+        pdfDoc.end();
       } catch (err) {
         reject(err);
       }
