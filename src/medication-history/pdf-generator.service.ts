@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import * as PdfPrinter from 'pdfmake';
 import { TDocumentDefinitions, StyleDictionary } from 'pdfmake/interfaces';
 import { PatientReportData } from './medication-history.service';
 import { ScheduleStatus } from '@prisma/client';
@@ -25,11 +24,13 @@ const STATUS_COLORS: Record<ScheduleStatus, string> = {
 
 @Injectable()
 export class PdfGeneratorService {
-  private printer: PdfPrinter;
+  // Menggunakan tipe any untuk menghindari konflik deklarasi d.ts bawaan pdfmake yang broken
+  private printer: any;
 
   constructor() {
-    // Di server-side (Node.js), pdfmake lebih stabil membaca langsung file font TTF asli 
-    // daripada mengekstrak base64 dari file build virtual filesystem vfs_fonts.js
+    // Membaca constructor asli server-side printer menggunakan require bawaan Node.js
+    const PdfPrinter = require('pdfmake');
+    
     const fontPath = path.resolve(process.cwd(), 'node_modules/pdfmake/fonts');
 
     const fonts = {
@@ -41,7 +42,7 @@ export class PdfGeneratorService {
       },
     };
 
-    // Inisialisasi printer server-side secara native
+    // Inisialisasi printer server-side secara native aman dari validasi strict TS
     this.printer = new PdfPrinter(fonts);
   }
 
