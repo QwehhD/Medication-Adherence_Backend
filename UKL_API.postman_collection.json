@@ -255,6 +255,45 @@
           }
         },
         {
+          "name": "Export Schedules to Excel",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token_doctor}}" }],
+            "url": {
+              "raw": "{{base_url}}/schedules/export",
+              "host": ["{{base_url}}"],
+              "path": ["schedules", "export"],
+              "query": [
+                {
+                  "key": "patientId",
+                  "value": "",
+                  "description": "Filter by patient UUID (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "PENDING",
+                  "description": "PENDING | WAITING_VERIFICATION | APPROVED | REJECTED | MISSED (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "from",
+                  "value": "2025-06-01",
+                  "description": "Start date ISO format (optional)",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "2025-06-30",
+                  "description": "End date ISO format (optional)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Download jadwal obat sebagai file Excel (.xlsx). Semua query param bersifat opsional — tanpa filter akan export semua jadwal milik dokter yang login.\n\nResponse: file attachment `jadwal_obat_YYYY-MM-DD.xlsx`"
+          }
+        },
+        {
           "name": "Get Schedule by ID",
           "request": {
             "method": "GET",
