@@ -34,7 +34,7 @@ export class PdfGeneratorService {
     // --- SOLUSI ABSOLUT SERVER-SIDE RUNTIME ---
     // Menggunakan require langsung ke core printer internal tepat saat fungsi dipanggil.
     // Ini menghindari isu window/document undefined dari file bundle browser.
-    const PdfPrinter = require('pdfmake').default || require('pdfmake');
+    const PdfPrinter = require('pdfmake/build/pdfmake');
 
     // Ambil VFS font secara aman tanpa bentrok type string
     const fontsObject = pdfMakeFonts as any;
