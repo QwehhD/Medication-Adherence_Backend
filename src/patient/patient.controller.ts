@@ -66,7 +66,7 @@ export class PatientController {
     file: Express.Multer.File,
     @Body() dto: UploadConsumptionDto,
   ) {
-    return this.patientService.uploadConsumption(req.user.id, file.path, dto.schedule_id);
+    return this.patientService.uploadConsumption(req.user.id, file, dto.schedule_id);
   }
 
   @ApiOperation({ summary: 'Get consumption history for the logged-in patient' })

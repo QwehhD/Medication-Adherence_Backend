@@ -3,7 +3,6 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { join } from 'path';
 import * as dns from 'node:dns';
 
 async function bootstrap() {
@@ -22,7 +21,6 @@ async function bootstrap() {
   allowedHeaders: ["Content-Type", "Authorization"],
 });
 
-  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads/' });
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
   );

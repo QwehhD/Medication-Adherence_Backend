@@ -1,20 +1,14 @@
 import { BadRequestException, Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { memoryStorage } from 'multer';
 import { PatientController } from './patient.controller';
 import { PatientService } from './patient.service';
+import { CloudinaryService } from '../common/cloudinary.service';
 
 @Module({
   imports: [
     MulterModule.register({
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (_req, file, cb) => {
-          const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-          cb(null, `proof-${unique}${extname(file.originalname)}`);
-        },
-      }),
+      storage: memoryStorage(),
       fileFilter: (_req, file, cb) => {
         if (!file.mimetype.match(/^image\/(jpeg|png|jpg)$/)) {
           return cb(new BadRequestException('Only jpg/png images are allowed'), false);
@@ -24,6 +18,6 @@ import { PatientService } from './patient.service';
     }),
   ],
   controllers: [PatientController],
-  providers: [PatientService],
+  providers: [PatientService, CloudinaryService],
 })
 export class PatientModule {}

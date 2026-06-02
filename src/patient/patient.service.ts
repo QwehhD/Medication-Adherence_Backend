@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CloudinaryService } from '../common/cloudinary.service';
 
 @Injectable()
 export class PatientService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private cloudinaryService: CloudinaryService,
+  ) {}
 
   async getTodaySchedules(patientId: string) {
     const start = new Date();
@@ -23,16 +27,18 @@ export class PatientService {
     });
   }
 
-  async uploadConsumption(patientId: string, filePath: string, scheduleId: string) {
+  async uploadConsumption(patientId: string, file: Express.Multer.File, scheduleId: string) {
     const schedule = await this.prisma.schedule.findUnique({ where: { id: scheduleId } });
     if (!schedule) throw new NotFoundException('Schedule not found');
+
+    const { url, publicId } = await this.cloudinaryService.uploadFile(file);
 
     const [consumption] = await this.prisma.$transaction([
       this.prisma.medicationConsumption.create({
         data: {
           schedule_id: scheduleId,
           patient_id: patientId,
-          proof_image: filePath,
+          proof_image: url,
           verification_status: 'WAITING_VERIFICATION',
         },
       }),
