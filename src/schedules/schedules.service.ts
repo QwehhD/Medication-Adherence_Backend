@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateScheduleDto } from './dto/create-schedule.dto';
 import { UpdateScheduleDto } from './dto/update-schedule.dto';
@@ -7,8 +11,9 @@ import { UpdateScheduleDto } from './dto/update-schedule.dto';
 export class SchedulesService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(doctorId: string) {
     return this.prisma.schedule.findMany({
+      where: { doctor_id: doctorId },
       orderBy: { created_at: 'desc' },
       include: {
         patient: { select: { id: true, email: true, patientProfile: true } },
@@ -18,7 +23,7 @@ export class SchedulesService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, doctorId: string) {
     const schedule = await this.prisma.schedule.findUnique({
       where: { id },
       include: {
@@ -28,15 +33,25 @@ export class SchedulesService {
         consumptions: true,
       },
     });
+
     if (!schedule) throw new NotFoundException('Schedule not found');
+
+    if (schedule.doctor_id !== doctorId) {
+      throw new ForbiddenException('Access denied');
+    }
+
     return schedule;
   }
 
   async create(doctorId: string, dto: CreateScheduleDto) {
-    const patient = await this.prisma.user.findUnique({ where: { id: dto.patient_id } });
+    const patient = await this.prisma.user.findUnique({
+      where: { id: dto.patient_id },
+    });
     if (!patient) throw new NotFoundException(`Patient with id ${dto.patient_id} not found`);
 
-    const medicine = await this.prisma.medicine.findUnique({ where: { id: dto.medicine_id } });
+    const medicine = await this.prisma.medicine.findUnique({
+      where: { id: dto.medicine_id },
+    });
     if (!medicine) throw new NotFoundException(`Medicine with id ${dto.medicine_id} not found`);
 
     const records = await this.prisma.$transaction(
@@ -53,6 +68,7 @@ export class SchedulesService {
         }),
       ),
     );
+
     return records;
   }
 
@@ -61,7 +77,9 @@ export class SchedulesService {
     if (!schedule) throw new NotFoundException('Schedule not found');
 
     if (dto.medicine_id) {
-      const medicine = await this.prisma.medicine.findUnique({ where: { id: dto.medicine_id } });
+      const medicine = await this.prisma.medicine.findUnique({
+        where: { id: dto.medicine_id },
+      });
       if (!medicine) throw new NotFoundException('Medicine not found');
     }
 
@@ -76,8 +94,11 @@ export class SchedulesService {
     const schedule = await this.prisma.schedule.findUnique({ where: { id } });
     if (!schedule) throw new NotFoundException('Schedule not found');
 
-    await this.prisma.medicationConsumption.deleteMany({ where: { schedule_id: id } });
+    await this.prisma.medicationConsumption.deleteMany({
+      where: { schedule_id: id },
+    });
     await this.prisma.schedule.delete({ where: { id } });
+
     return { message: 'Schedule deleted successfully' };
   }
 }

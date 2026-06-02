@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -33,24 +34,25 @@ export class PatientsController {
   @ApiOperation({ summary: 'Get all patients (Doctor only)' })
   @ApiResponse({ status: 200, description: 'List of all active patients' })
   @Get()
-  findAll() {
-    return this.patientsService.findAll();
+  findAll(@Request() req: any) {
+    return this.patientsService.findAll(req.user.id);
   }
 
   @ApiOperation({ summary: 'Get patient by ID (Doctor only)' })
   @ApiResponse({ status: 200, description: 'Patient data' })
+  @ApiResponse({ status: 403, description: 'Access denied' })
   @ApiResponse({ status: 404, description: 'Patient not found' })
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.patientsService.findOne(id);
+  findOne(@Param('id') id: string, @Request() req: any) {
+    return this.patientsService.findOne(id, req.user.id);
   }
 
   @ApiOperation({ summary: 'Create a new patient account (Doctor only)' })
   @ApiResponse({ status: 201, description: 'Patient created successfully' })
   @ApiResponse({ status: 409, description: 'Email already registered' })
   @Post()
-  create(@Body() dto: CreatePatientDto) {
-    return this.patientsService.create(dto);
+  create(@Request() req: any, @Body() dto: CreatePatientDto) {
+    return this.patientsService.create(dto, req.user.id);
   }
 
   @ApiOperation({ summary: 'Update patient profile (Doctor only)' })

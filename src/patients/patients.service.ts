@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -12,33 +13,47 @@ import { UpdatePatientDto } from './dto/update-patient.dto';
 export class PatientsService {
   constructor(private prisma: PrismaService) {}
 
-  findAll() {
+  findAll(doctorId: string) {
     return this.prisma.patientProfile.findMany({
+      where: {
+        assigned_doctor_id: doctorId,
+        deleted_at: null,
+      },
       include: {
         user: { select: { id: true, email: true, role: true, created_at: true } },
       },
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, doctorId: string) {
     const patient = await this.prisma.patientProfile.findUnique({
       where: { id },
       include: {
         user: { select: { id: true, email: true, role: true, created_at: true } },
       },
     });
+
     if (!patient) throw new NotFoundException('Patient not found');
+
+    if (patient.assigned_doctor_id !== doctorId) {
+      throw new ForbiddenException('Access denied');
+    }
+
     return patient;
   }
 
-  async create(dto: CreatePatientDto) {
+  async create(dto: CreatePatientDto, doctorId: string) {
     const exists = await this.prisma.user.findFirst({
       where: { email: dto.email },
     });
     if (exists) throw new ConflictException('Email already registered');
 
     const hashed = await bcrypt.hash(dto.password, 12);
-    const baseUsername = dto.full_name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+
+    const baseUsername = dto.full_name
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '');
     let username = baseUsername;
     let suffix = 1;
     while (await this.prisma.user.findUnique({ where: { username } })) {
@@ -57,6 +72,7 @@ export class PatientsService {
             age: dto.age,
             main_disease: dto.main_disease,
             whatsapp_number: dto.whatsapp_number,
+            assigned_doctor_id: doctorId,
           },
         },
       },

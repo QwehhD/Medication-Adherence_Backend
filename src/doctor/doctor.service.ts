@@ -6,9 +6,16 @@ import { RejectConsumptionDto } from './dto/reject-consumption.dto';
 export class DoctorService {
   constructor(private prisma: PrismaService) {}
 
-  async getWaitingVerifications() {
+  async getWaitingVerifications(doctorId: string) {
     return this.prisma.medicationConsumption.findMany({
-      where: { verification_status: 'WAITING_VERIFICATION' },
+      where: {
+        verification_status: 'WAITING_VERIFICATION',
+        patient: {
+          patientProfile: {
+            assigned_doctor_id: doctorId,
+          },
+        },
+      },
       include: {
         patient: {
           select: {

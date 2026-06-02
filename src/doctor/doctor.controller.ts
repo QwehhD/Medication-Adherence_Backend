@@ -1,5 +1,18 @@
-import { Body, Controller, Get, Param, Patch, Request, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { Roles } from '../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -18,8 +31,8 @@ export class DoctorController {
   @ApiOperation({ summary: 'Get all consumptions waiting verification (Doctor only)' })
   @ApiResponse({ status: 200, description: 'List of consumptions with WAITING_VERIFICATION status' })
   @Get('verifications')
-  getWaitingVerifications() {
-    return this.doctorService.getWaitingVerifications();
+  getWaitingVerifications(@Request() req: any) {
+    return this.doctorService.getWaitingVerifications(req.user.id);
   }
 
   @ApiOperation({ summary: 'Approve a medication consumption (Doctor only)' })
@@ -34,7 +47,11 @@ export class DoctorController {
   @ApiResponse({ status: 200, description: 'Consumption rejected successfully' })
   @ApiResponse({ status: 404, description: 'Consumption not found' })
   @Patch('consumptions/:id/reject')
-  reject(@Param('id') id: string, @Request() req: any, @Body() dto: RejectConsumptionDto) {
+  reject(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body() dto: RejectConsumptionDto,
+  ) {
     return this.doctorService.rejectConsumption(id, req.user.id, dto);
   }
 }

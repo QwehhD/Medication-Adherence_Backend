@@ -34,16 +34,17 @@ export class SchedulesController {
   @ApiOperation({ summary: 'Get all schedules with full info (Doctor only)' })
   @ApiResponse({ status: 200, description: 'List of schedules' })
   @Get()
-  findAll() {
-    return this.schedulesService.findAll();
+  findAll(@Request() req: any) {
+    return this.schedulesService.findAll(req.user.id);
   }
 
   @ApiOperation({ summary: 'Get schedule by ID with full info (Doctor only)' })
   @ApiResponse({ status: 200, description: 'Schedule detail' })
+  @ApiResponse({ status: 403, description: 'Access denied' })
   @ApiResponse({ status: 404, description: 'Schedule not found' })
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.schedulesService.findOne(id);
+  findOne(@Param('id') id: string, @Request() req: any) {
+    return this.schedulesService.findOne(id, req.user.id);
   }
 
   @ApiOperation({ summary: 'Create schedules for a patient (Doctor only)' })
