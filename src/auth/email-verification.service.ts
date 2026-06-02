@@ -39,22 +39,24 @@ export class EmailVerificationService {
       this.config.get<string>('APP_URL') || 'http://localhost:3000';
     const link = `${appUrl}/auth/verify-email?token=${token}`;
 
-    try {
-      const brevoApiKey = this.config.get<string>('BREVO_API_KEY');
-      if (!brevoApiKey) {
-        throw new BadRequestException('BREVO_API_KEY is not configured');
-      }
+    const brevoApiKey = this.config.get<string>('BREVO_API_KEY');
+    const mailFromEmail = this.config.get<string>('MAIL_FROM_EMAIL');
+    const mailFromName = this.config.get<string>('MAIL_FROM_NAME') || 'Adherify';
 
+    if (!brevoApiKey) throw new BadRequestException('BREVO_API_KEY is not configured');
+    if (!mailFromEmail) throw new BadRequestException('MAIL_FROM_EMAIL is not configured');
+
+    try {
       const response = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'api-key': brevoApiKey,
         },
-      body: JSON.stringify({
+        body: JSON.stringify({
           sender: {
-            name: this.config.get<string>('MAIL_FROM_NAME') || 'Adherify',
-            email: this.config.get<string>('MAIL_FROM_EMAIL'),
+            name: mailFromName,
+            email: mailFromEmail,
           },
           to: [{ email }],
           subject: 'Verifikasi Email Anda',
@@ -64,7 +66,8 @@ export class EmailVerificationService {
             <p>Link berlaku selama ${this.TOKEN_EXPIRY_MINUTES} menit.</p>
           `,
         }),
-    });
+      });
+
       if (!response.ok) {
         const errBody = await response.json();
         throw new Error(errBody.message || 'Brevo API error');
