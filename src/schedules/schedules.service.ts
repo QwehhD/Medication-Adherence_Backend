@@ -1,10 +1,8 @@
 import {
   ForbiddenException,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { ScheduleStatus } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../prisma/prisma.service';
@@ -33,122 +31,29 @@ interface ExportFilter {
 
 @Injectable()
 export class SchedulesService {
-  private readonly logger = new Logger(SchedulesService.name);
-
   constructor(private prisma: PrismaService) {}
-
-  // ─── Stock Deduction Cron ─────────────────────────────────────────────────
-  /**
-   * Runs every minute.
-   * Finds all PENDING schedules whose `time` (HH:mm) matches the current
-   * WIB (UTC+7) hour:minute, then — inside a transaction — decrements the
-   * medicine stock by the numeric part of `dose` and marks the schedule MISSED
-   * so it won't be processed again.
-   *
-   * Why MISSED and not a new status?
-   *   • Stock is deducted at dispense time regardless of whether the patient
-   *     actually takes the pill; the hardware slot opens and releases the dose.
-   *   • MISSED is later overwritten to WAITING_VERIFICATION when the patient
-   *     uploads proof, or stays MISSED if they never do.
-   *   • No schema changes needed.
-   */
-  @Cron(CronExpression.EVERY_MINUTE)
-  async deductStockOnScheduledTime(): Promise<void> {
-    // Current time in WIB (UTC+7), formatted as HH:mm
-    const nowWIB  = new Date(Date.now() + 7 * 60 * 60 * 1000);
-    const hh      = String(nowWIB.getUTCHours()).padStart(2, '0');
-    const mm      = String(nowWIB.getUTCMinutes()).padStart(2, '0');
-    const current = `${hh}:${mm}`;
-
-    // Find all PENDING schedules for this exact time slot
-    const due = await this.prisma.schedule.findMany({
-      where:   { time: current, status: 'PENDING' },
-      include: { medicine: true },
-    });
-
-    if (!due.length) return;
-
-    this.logger.log(
-      `[StockDeduct] ${current} WIB — processing ${due.length} schedule(s)`,
-    );
-
-    for (const schedule of due) {
-      // Parse numeric tablet count from dose string, e.g. "2 tablet" → 2
-      const tabletCount = this.parseDoseTablets(schedule.dose);
-
-      try {
-        await this.prisma.$transaction(async (tx) => {
-          // 1. Guard: ensure stock won't go negative
-          const medicine = await tx.medicine.findUnique({
-            where: { id: schedule.medicine_id },
-          });
-
-          if (!medicine) {
-            this.logger.warn(
-              `[StockDeduct] Medicine ${schedule.medicine_id} not found — skipping schedule ${schedule.id}`,
-            );
-            return;
-          }
-
-          const deduct = Math.min(tabletCount, medicine.stock); // never below 0
-
-          // 2. Decrement stock
-          await tx.medicine.update({
-            where: { id: medicine.id },
-            data:  { stock: { decrement: deduct } },
-          });
-
-          // 3. Transition schedule → MISSED so cron won't re-process it
-          await tx.schedule.update({
-            where: { id: schedule.id },
-            data:  { status: 'MISSED' },
-          });
-
-          this.logger.log(
-            `[StockDeduct] Schedule ${schedule.id}: medicine "${medicine.name}" ` +
-            `stock ${medicine.stock} → ${medicine.stock - deduct} (−${deduct} tablet)`,
-          );
-        });
-      } catch (err) {
-        this.logger.error(
-          `[StockDeduct] Failed for schedule ${schedule.id}: ${(err as Error).message}`,
-        );
-      }
-    }
-  }
-
-  /**
-   * Extract the tablet/pill count from a free-text dose string.
-   * Examples: "2 tablet", "1tablet", "3", "0.5 tablet" → 2, 1, 3, 1 (min 1)
-   */
-  private parseDoseTablets(dose: string): number {
-    const match = dose.match(/(\d+(?:\.\d+)?)/);
-    if (!match) return 1;
-    const value = Math.round(parseFloat(match[1]));
-    return Math.max(1, value);
-  }
 
   // ─── existing methods ────────────────────────────────────────────────────────
 
   async findAll(doctorId: string) {
     return this.prisma.schedule.findMany({
-      where:    { doctor_id: doctorId },
-      orderBy:  { created_at: 'desc' },
+      where: { doctor_id: doctorId },
+      orderBy: { created_at: 'desc' },
       include: {
-        patient:  { select: { id: true, email: true, patientProfile: true } },
+        patient: { select: { id: true, email: true, patientProfile: true } },
         medicine: true,
-        doctor:   { select: { id: true, email: true } },
+        doctor: { select: { id: true, email: true } },
       },
     });
   }
 
   async findOne(id: string, doctorId: string) {
     const schedule = await this.prisma.schedule.findUnique({
-      where:   { id },
+      where: { id },
       include: {
-        patient:      { select: { id: true, email: true, patientProfile: true } },
-        medicine:     true,
-        doctor:       { select: { id: true, email: true } },
+        patient: { select: { id: true, email: true, patientProfile: true } },
+        medicine: true,
+        doctor: { select: { id: true, email: true } },
         consumptions: true,
       },
     });
@@ -163,14 +68,12 @@ export class SchedulesService {
     const patient = await this.prisma.user.findUnique({
       where: { id: dto.patient_id },
     });
-    if (!patient)
-      throw new NotFoundException(`Patient with id ${dto.patient_id} not found`);
+    if (!patient) throw new NotFoundException(`Patient with id ${dto.patient_id} not found`);
 
     const medicine = await this.prisma.medicine.findUnique({
       where: { id: dto.medicine_id },
     });
-    if (!medicine)
-      throw new NotFoundException(`Medicine with id ${dto.medicine_id} not found`);
+    if (!medicine) throw new NotFoundException(`Medicine with id ${dto.medicine_id} not found`);
 
     const records = await this.prisma.$transaction(
       dto.times.map((time) =>
@@ -241,9 +144,9 @@ export class SchedulesService {
       },
     });
 
-    const wb    = new ExcelJS.Workbook();
-    wb.creator  = 'Adherify';
-    wb.created  = new Date();
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Adherify';
+    wb.created = new Date();
 
     this.buildMainSheet(wb, schedules);
     this.buildLegendSheet(wb);
@@ -281,8 +184,7 @@ export class SchedulesService {
     const centerCols = new Set(['no', 'slot', 'dose', 'time']);
 
     schedules.forEach((s, idx) => {
-      const patientName =
-        s.patient?.patientProfile?.full_name ?? s.patient?.username ?? '-';
+      const patientName = s.patient?.patientProfile?.full_name ?? s.patient?.username ?? '-';
 
       const row = ws.addRow({
         no:         idx + 1,
@@ -296,17 +198,14 @@ export class SchedulesService {
         created_at: this.formatDate(s.created_at),
       });
 
-      row.height       = 20;
-      const bgArgb     = STATUS_FILL[s.status] ?? 'FFFFFFFF';
+      row.height = 20;
+      const bgArgb = STATUS_FILL[s.status] ?? 'FFFFFFFF';
 
       row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
         const key = ws.getColumn(colNumber).key as string;
         cell.font      = { name: 'Arial', size: 10 };
         cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgArgb } };
-        cell.alignment = {
-          horizontal: centerCols.has(key) ? 'center' : 'left',
-          vertical:   'middle',
-        };
+        cell.alignment = { horizontal: centerCols.has(key) ? 'center' : 'left', vertical: 'middle' };
         cell.border    = this.thinBorder();
       });
     });
@@ -340,8 +239,8 @@ export class SchedulesService {
     ];
 
     legend.forEach(({ status, desc }) => {
-      const row    = ws.addRow({ status, desc });
-      row.height   = 22;
+      const row = ws.addRow({ status, desc });
+      row.height = 22;
       const bgArgb = STATUS_FILL[status] ?? 'FFFFFFFF';
       row.eachCell({ includeEmpty: true }, (cell) => {
         cell.font      = { name: 'Arial', size: 10 };
@@ -353,22 +252,15 @@ export class SchedulesService {
   }
 
   private thinBorder(): Partial<ExcelJS.Borders> {
-    const s: Partial<ExcelJS.Border> = {
-      style: 'thin',
-      color: { argb: 'FFBDD7EE' },
-    };
+    const s: Partial<ExcelJS.Border> = { style: 'thin', color: { argb: 'FFBDD7EE' } };
     return { top: s, bottom: s, left: s, right: s };
   }
 
   private formatDate(date: Date | null): string {
     if (!date) return '-';
     return new Date(date).toLocaleString('id-ID', {
-      year:   'numeric',
-      month:  '2-digit',
-      day:    '2-digit',
-      hour:   '2-digit',
-      minute: '2-digit',
-      hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false,
     });
   }
 }
