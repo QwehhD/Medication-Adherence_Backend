@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsString, MinLength, IsUUID, IsOptional } from 'class-validator';
+import { IsEmail, IsEnum, IsString, MinLength, IsUUID, IsOptional, ValidateIf } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 
@@ -20,8 +20,8 @@ export class RegisterDto {
   @IsEnum(Role)
   role: Role;
 
-  @ApiProperty({ example: 'doctor-uuid', required: false, description: 'Doctor ID for patient registration' })
-  @IsOptional()
+  @ApiProperty({ example: 'doctor-uuid', required: false, description: 'Doctor ID — wajib jika role PATIENT' })
+  @ValidateIf((o) => o.role === Role.PATIENT)
   @IsUUID()
   doctorId?: string;
 }

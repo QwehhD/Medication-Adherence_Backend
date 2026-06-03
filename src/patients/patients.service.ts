@@ -2,16 +2,23 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailVerificationService } from '../auth/email-verification.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 
 @Injectable()
 export class PatientsService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(PatientsService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private emailVerification: EmailVerificationService,
+  ) {}
 
   findAll(doctorId: string) {
     return this.prisma.patientProfile.findMany({
@@ -32,13 +39,10 @@ export class PatientsService {
         user: { select: { id: true, email: true, role: true, created_at: true } },
       },
     });
-
     if (!patient) throw new NotFoundException('Patient not found');
-
     if (patient.assigned_doctor_id !== doctorId) {
       throw new ForbiddenException('Access denied');
     }
-
     return patient;
   }
 
@@ -49,11 +53,10 @@ export class PatientsService {
     if (exists) throw new ConflictException('Email already registered');
 
     const hashed = await bcrypt.hash(dto.password, 12);
-
     const baseUsername = dto.full_name
       .toLowerCase()
-      .replace(/\s+/g, '_')
-      .replace(/[^a-z0-9_]/g, '');
+      .replace(/\s+/g, '')
+      .replace(/[^a-z0-9]/g, '');
     let username = baseUsername;
     let suffix = 1;
     while (await this.prisma.user.findUnique({ where: { username } })) {
@@ -78,6 +81,14 @@ export class PatientsService {
       },
       include: { patientProfile: true },
     });
+
+    try {
+      await this.emailVerification.sendVerificationLink(user.email);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send verification email to ${user.email}: ${error instanceof Error ? error.message : error}`,
+      );
+    }
 
     const { password: _pw, ...result } = user;
     return result;
@@ -104,7 +115,6 @@ export class PatientsService {
     await this.prisma.user.delete({
       where: { id: patient.user_id },
     });
-
     return { message: 'Patient deleted successfully' };
   }
 }

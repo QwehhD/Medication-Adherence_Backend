@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, IsInt, Min, IsUUID, IsOptional } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsInt, Min, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RegisterPatientDto {
@@ -28,8 +28,7 @@ export class RegisterPatientDto {
   @IsString()
   whatsapp_number: string;
 
-  @ApiProperty({ example: 'doctor-uuid', required: false, description: 'Doctor ID to assign to this patient' })
-  @IsOptional()
+  @ApiProperty({ example: 'doctor-uuid', description: 'Doctor ID to assign to this patient' })
   @IsUUID()
-  doctorId?: string;
+  doctorId: string;
 }
