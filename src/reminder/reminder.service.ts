@@ -10,9 +10,10 @@ export class ReminderService {
 
   @Cron('* * * * *')
   async sendMedicationReminders() {
-    const now = new Date();
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
+    // ✅ Konversi ke WIB (UTC+7) — Railway server jalan di UTC
+    const wibNow  = new Date(Date.now() + 7 * 60 * 60 * 1000);
+    const hours   = wibNow.getUTCHours().toString().padStart(2, '0');
+    const minutes = wibNow.getUTCMinutes().toString().padStart(2, '0');
     const currentTime = `${hours}:${minutes}`;
 
     const schedules = await this.prisma.schedule.findMany({
@@ -26,8 +27,8 @@ export class ReminderService {
     });
 
     for (const schedule of schedules) {
-      const phone = schedule.patient.patientProfile?.whatsapp_number ?? 'unknown';
-      const name = schedule.patient.patientProfile?.full_name ?? schedule.patient.email;
+      const phone   = schedule.patient.patientProfile?.whatsapp_number ?? 'unknown';
+      const name    = schedule.patient.patientProfile?.full_name ?? schedule.patient.email;
       const message = `Halo ${name}, waktunya minum obat ${schedule.medicine.name} (${schedule.dose}). Jangan lupa ya!`;
 
       await this.sendWhatsApp(phone, message);
@@ -43,11 +44,10 @@ export class ReminderService {
 
       const response = await fetch('https://api.fonnte.com/send', {
         method: 'POST',
-        headers: {
-          Authorization: token,
-        } as HeadersInit,
+        headers: { Authorization: token } as HeadersInit,
         body: form,
       });
+
       const result = await response.json();
       if (result.status) {
         this.logger.log(`[WhatsApp] Sent to ${phone}`);
